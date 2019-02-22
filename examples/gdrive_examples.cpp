@@ -64,7 +64,7 @@ void print_getting_started_content(ccd::gdrive::v3::resource::files::files& file
 
 int main()
 {
-    std::string token_file = "/Users/iurii/proj/src/cldrv/tokens/token.json";
+    std::string token_file = "token.json";
 
     auto http_client = ccd::create_gdrive_http_client(GDRIVE_APP_ID, GDRIVE_SECRET_KEY, token_file);
     ccd::gdrive::gdrive g { http_client };
