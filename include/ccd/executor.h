@@ -40,6 +40,9 @@ private:
     template <typename T, pplx::task<T>(web::http::http_response::*func)(bool) const>
     pplx::task<T> exec_raw();
 
+    template <typename T>
+    static pplx::task<T> throw_executor_exception(const web::http::http_response& resp);
+
     virtual web::http::http_request build_request() = 0;
 
     pplx::task<http_client_ptr> m_client_task;
@@ -75,13 +78,34 @@ pplx::task<T> executor::exec_raw()
         {
             auto resp = resp_task.get();
             auto code = resp.status_code();
-            return  (code >= 200 && code < 300) ? (resp.*func)(true)
-                                                : pplx::task_from_exception<T>(executor_exception{ code });
+            return (code >= 200 && code < 300) ? (resp.*func)(true)
+                                               : throw_executor_exception<T>(resp);
         }
         catch (...)
         {
             return pplx::task_from_exception<T>(std::current_exception());
         }
+    });
+}
+
+template <typename T>
+pplx::task<T> executor::throw_executor_exception(const web::http::http_response& resp)
+{
+    return resp.extract_utf8string(true).then([code = resp.status_code()](pplx::task<std::string> body_task)
+    {
+        auto msg = "code: " + std::to_string(code);
+        try
+        {
+            auto s = body_task.get();
+            if (s.length() > 4800)
+            {
+                s.resize(4797);
+                s += "...";
+            }
+            msg += ", body: " + s;
+        }
+        catch (...) {}
+        return pplx::task_from_exception<T>(executor_exception{ code, msg });
     });
 }
 
