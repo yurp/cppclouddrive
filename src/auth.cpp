@@ -268,4 +268,64 @@ boost::future<token> refresh(std::string app_id, std::string app_secret, std::st
 
 }
 
+namespace dropbox
+{
+
+boost::future<token> automatic(std::string app_id, std::string app_secret, std::string redirect_uri)
+{
+    return ccd::auth::oauth2::automatic(std::move(app_id), std::move(app_secret), dropbox_auth_uri, dropbox_token_uri,
+                                        std::move(redirect_uri), "");
+}
+
+boost::future<token> auth_manual(std::string app_id, std::string app_secret)
+{
+    using namespace utility::conversions;
+
+    std::cout << "go to: " << dropbox_auth_uri << "?response_type=code&client_id=" << app_id << "\n"
+              << "then paste input code here: ";
+
+    boost::promise<token> p;
+    auto f = p.get_future();
+
+    auto code_buf = std::make_shared<Concurrency::streams::stringstreambuf>();
+    acin().read_line(*code_buf).then([code_buf, app_id, app_secret](size_t) mutable
+    {
+        web::http::client::http_client_config client_conf;
+        client_conf.set_credentials({ to_string_t(std::move(app_id)), to_string_t(std::move(app_secret)) });
+        web::http::client::http_client client { dropbox_token_uri, client_conf };
+
+        web::http::http_request r { web::http::methods::POST };
+        r.set_body("grant_type=authorization_code&code=" + code_buf->collection(), "application/x-www-form-urlencoded");
+
+        return client.request(r);
+    })
+    .then([](web::http::http_response r)
+    {
+        return r.extract_json(true);
+    })
+    .then([p = std::move(p)](web::json::value js) mutable
+    {
+        ccd::auth::oauth2::token t;
+        if (js.is_object() && js.has_field("access_token"))
+        {
+            t.access = to_utf8string(js["access_token"].as_string());
+        }
+
+        p.set_value(std::move(t));
+    });
+
+    return f;
+}
+
+pplx::task<web::http::client::http_client_config> auth_refresh(std::string app_id,
+                                                               std::string app_secret,
+                                                               std::string refresh_token,
+                                                               web::http::client::http_client_config conf)
+{
+    return ccd::auth::oauth2::refresh(std::move(app_id), std::move(app_secret), dropbox_auth_uri, dropbox_token_uri,
+                                      std::move(refresh_token));
+}
+
+}
+
 }

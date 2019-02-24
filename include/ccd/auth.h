@@ -52,4 +52,13 @@ boost::future<token> refresh(std::string app_id, std::string app_secret, std::st
 
 }
 
+namespace dropbox
+{
+
+boost::future<token> automatic(std::string app_id, std::string app_secret, std::string redirect_uri);
+boost::future<token> manual(std::string app_id, std::string app_secret);
+boost::future<token> auth_refresh(std::string app_id, std::string app_secret, std::string refresh_token);
+
+}
+
 }

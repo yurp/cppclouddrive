@@ -27,6 +27,9 @@ set(CCD_HDR
         include/ccd/http/http_transport.h
         include/ccd/http/cpprest_transport.h # should be optional!
 
+        include/ccd/dropbox/model/dropbox_metadata.h
+        include/ccd/dropbox/resource/dropbox_list_folder.h
+
         include/ccd/gdrive/gdrive.h
         include/ccd/gdrive/details/gdrive_parameters.h
         include/ccd/gdrive/model/gdrive_file.h
@@ -48,6 +51,9 @@ set(CCD_SRC
         src/http/authorized_oauth2_transport.cpp
         src/http/http_transport.cpp
         src/http/cpprest_transport.cpp # should be optional!
+
+        src/dropbox/model/dropbox_metadata.cpp
+        src/dropbox/resource/dropbox_list_folder.cpp
 
         src/gdrive/gdrive.cpp
         src/gdrive/model/gdrive_file.cpp

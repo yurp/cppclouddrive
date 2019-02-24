@@ -56,12 +56,27 @@ std::optional<T> create_object(ccd::var& js, const std::string& key)
     return std::nullopt;
 }
 
-template <typename T>
+template<typename T>
+std::optional<T> create_object_copy(const ccd::var& js, const std::string& key)
+{
+    if (js.is<var::map_t>() && js.has(key) && js.as<var::map_t>().at(key).is<var::map_t>())
+    {
+        return T{ js.as<var::map_t>().at(key) };
+    }
+
+    return std::nullopt;
+}
+
+template<typename T>
 void object_to_json(ccd::var& js, const std::string& key, const std::optional<T>& obj)
 {
     if (obj)
     {
         js[key] = obj->to_json();
+    }
+    else if (js.has(key))
+    {
+        js.as<ccd::var::map_t>().erase(key);
     }
 }
 
@@ -82,7 +97,24 @@ std::optional<std::vector<T>> create_object_list(ccd::var& js, const std::string
     return std::nullopt;
 }
 
-template <typename T>
+template<typename T>
+std::optional<std::vector<T>> create_object_list_copy(const ccd::var& js, const std::string& key)
+{
+    if (js.is<var::map_t>() && js.has(key) && js.as<var::map_t>().at(key).is<var::map_t>())
+    {
+        std::optional<std::vector<T>> lst = std::vector<T>{ };
+        for (auto& i: js.as<var::map_t>().at(key).as<ccd::var::vector_t>())
+        {
+            lst->emplace_back(i);
+        }
+
+        return lst;
+    }
+
+    return std::nullopt;
+}
+
+template<typename T>
 void object_list_to_json(ccd::var& js, const std::string& key, const std::optional<std::vector<T>>& lst)
 {
     if (lst)
@@ -93,6 +125,10 @@ void object_list_to_json(ccd::var& js, const std::string& key, const std::option
         {
             js_arr.emplace_back(i.to_json());
         }
+    }
+    else if (js.has(key))
+    {
+        js.as<var::map_t>().erase(key);
     }
 }
 
