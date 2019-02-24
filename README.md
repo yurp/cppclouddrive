@@ -12,6 +12,11 @@ More info about filters, fields etc can be found in [official documentation](htt
 
 Usage example (list Google Drive root directory):
 ```c++
+    auto http_client = gdrive::auth_auto(GDRIVE_APP_ID, GDRIVE_SECRET_KEY, "http://localhost:25000/")
+        .then([token_file](http_client_config c)
+        {
+            return std::make_shared<web::http::client::http_client>("https://www.googleapis.com", c);
+        }
     auto http_client = ccd::create_gdrive_http_client(GDRIVE_APP_ID, GDRIVE_SECRET_KEY, token_file);
     ccd::gdrive::gdrive g { http_client };
     auto files_rsc = g.files_resource();
