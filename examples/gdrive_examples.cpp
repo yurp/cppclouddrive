@@ -1,8 +1,7 @@
 
-#include <ccd/utils.h>
+#include <ccd/auth_utils.h>
 #include <ccd/gdrive/gdrive.h>
 
-#include <algorithm>
 #include <iostream>
 
 // set your app id here or define outside
@@ -14,6 +13,34 @@
 #ifndef GDRIVE_SECRET_KEY
 #define GDRIVE_SECRET_KEY ""
 #endif
+
+pplx::task<web::http::client::http_client_config> auth()
+{
+    using namespace ccd::auth_utils;
+    using namespace utility::conversions;
+    using namespace web::http::client;
+
+    std::string token_file = "token.json";
+    std::string redirect_uri = "http://localhost:25000/";
+
+    auto token = ccd::auth_utils::load_token(token_file);
+    if (!token.refresh_token().empty())
+    {
+        return gdrive::auth_refresh(GDRIVE_APP_ID, GDRIVE_SECRET_KEY, to_utf8string(token.refresh_token()));
+    }
+
+    if (!token.access_token().empty())
+    {
+        return pplx::task_from_result(gdrive::auth_access_token(GDRIVE_APP_ID, GDRIVE_SECRET_KEY,
+                                                                to_utf8string(token.access_token())));
+    }
+
+    return gdrive::auth_auto(GDRIVE_APP_ID, GDRIVE_SECRET_KEY, redirect_uri).then([token_file](http_client_config c)
+    {
+        ccd::auth_utils::save_token(c.oauth2()->token(), token_file);
+        return c;
+    });
+}
 
 void list_root_dir(ccd::gdrive::v3::resource::files::files& files_rsc)
 {
@@ -64,10 +91,12 @@ void print_getting_started_content(ccd::gdrive::v3::resource::files::files& file
 
 int main()
 {
-    std::string token_file = "token.json";
+    auto client = auth().then([](web::http::client::http_client_config c)
+    {
+        return std::make_shared<web::http::client::http_client>("https://www.googleapis.com", c);
+    });
 
-    auto http_client = ccd::create_gdrive_http_client(GDRIVE_APP_ID, GDRIVE_SECRET_KEY, token_file);
-    ccd::gdrive::gdrive g { http_client };
+    ccd::gdrive::gdrive g { client };
     auto files_rsc = g.files_resource();
 
     list_root_dir(files_rsc);

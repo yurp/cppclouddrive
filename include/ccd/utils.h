@@ -8,27 +8,7 @@
 
 #include <optional>
 
-namespace ccd
-{
-
-/// @brief creates http_client for gdrive API.
-///        With auth URI https://accounts.google.com/o/oauth2/auth,
-///        token URI https://oauth2.googleapis.com/token,
-///        redirect URI urn:ietf:wg:oauth:2.0:oob.
-///        scope https://www.googleapis.com/auth/drive,
-///        The client doesn't request responce compressing.
-///        If the function is run for new user, or the token has been expired, then the function will print URL to cout,
-///        which should be opened by user. Once user follows all instruction at the URL page and receives token, they
-///        should enter this token to cin
-/// @param[in] oauth2_client_id     OAuth2 client (application) ID
-/// @param[in] oauth2_client_secret OAuth client's secret
-/// @param[in] oauth2_token_file    json file for keeping OAuth2 token. If it doesn't exists, the function will create
-///                                 it
-pplx::task<http_client_ptr> create_gdrive_http_client(std::string oauth2_client_id,
-                                                      std::string oauth2_client_secret,
-                                                      std::string oauth2_token_file);
-
-namespace details
+namespace ccd::details
 {
 
 std::optional<string_list_t> create_string_list(web::json::value& js, std::string key);
@@ -128,5 +108,4 @@ void object_list_to_json(web::json::value& js, std::string key, const std::optio
     }
 }
 
-}
 }

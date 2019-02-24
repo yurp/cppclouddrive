@@ -1,87 +1,9 @@
 
 #include <ccd/utils.h>
 
-#include <cpprest/asyncrt_utils.h>
-#include <cpprest/interopstream.h>
-#include <cpprest/oauth2.h>
+#include <mutex>
 
-namespace ccd
-{
-
-using namespace web::http::oauth2::experimental;
-
-namespace
-{
-
-void save_token(const std::string& oauth2_token_file, const oauth2_config& conf)
-{
-    web::json::value js = web::json::value::object();
-    js["access_token"] = web::json::value{ conf.token().access_token() };
-    js["refresh_token"] = web::json::value{ conf.token().refresh_token() };
-    js["type"] = web::json::value{ conf.token().token_type() };
-
-    if (auto f = utility::ofstream_t{ oauth2_token_file })
-    {
-        js.serialize(f);
-    }
-}
-
-http_client_ptr create_client(const oauth2_config& conf)
-{
-    web::http::client::http_client_config http_conf;
-    http_conf.set_oauth2(conf);
-    return std::make_shared<web::http::client::http_client>("https://www.googleapis.com", http_conf);
-}
-
-}
-
-pplx::task<http_client_ptr> create_gdrive_http_client(std::string oauth2_client_id,
-                                                      std::string oauth2_client_secret,
-                                                      std::string oauth2_token_file)
-{
-    auto conf = std::make_shared<oauth2_config>(std::move(oauth2_client_id),
-                                                std::move(oauth2_client_secret),
-                                                "https://accounts.google.com/o/oauth2/auth",
-                                                "https://oauth2.googleapis.com/token",
-                                                "urn:ietf:wg:oauth:2.0:oob",
-                                                "https://www.googleapis.com/auth/drive");
-
-    if (auto f = utility::ifstream_t { oauth2_token_file })
-    {
-        auto js = web::json::value::parse(f);
-        oauth2_token token { js["access_token"].as_string() };
-        token.set_refresh_token(js["refresh_token"].as_string());
-        token.set_token_type(js["type"].as_string());
-
-        conf->set_token(token);
-        return conf->token_from_refresh().then([conf, oauth2_token_file = std::move(oauth2_token_file)]
-        {
-            if (!conf->token().refresh_token().empty())
-            {
-                save_token(oauth2_token_file, *conf);
-            }
-            return create_client(*conf);
-        });
-    }
-    else
-    {
-        std::cout << "go to:" << conf->build_authorization_uri(true) << "\nthen paste input code here: ";
-
-        static Concurrency::streams::stdio_istream<char> acin { std::cin };
-        auto secret_code_buf = std::make_shared<Concurrency::streams::stringstreambuf>();
-        return acin.read_line(*secret_code_buf).then([secret_code_buf, conf](size_t)
-        {
-            return conf->token_from_code(secret_code_buf->collection());
-        })
-        .then([conf, oauth2_token_file = std::move(oauth2_token_file)]
-        {
-            save_token(oauth2_token_file, *conf);
-            return create_client(*conf);
-        });
-    }
-}
-
-namespace details
+namespace ccd::details
 {
 
 std::optional<string_list_t> create_string_list(web::json::value& js, std::string key)
@@ -269,5 +191,4 @@ std::optional<int32_t> get_int32(const web::json::value& js, std::string key)
     return std::nullopt;
 }
 
-}
 }

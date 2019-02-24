@@ -15,9 +15,11 @@ add_compile_options(-Wall -Werror)
 add_definitions(-D_TURN_OFF_PLATFORM_STRING) # disable cpprestsdk U() macro, which may conflict with other libs
 
 set(CCD_HDR
-        include/ccd/executor.h
+        include/ccd/auth_utils.h
         include/ccd/defs.h
+        include/ccd/executor.h
         include/ccd/utils.h
+
         include/ccd/gdrive/gdrive.h
         include/ccd/gdrive/details/gdrive_parameters.h
         include/ccd/gdrive/model/gdrive_file.h
@@ -31,8 +33,10 @@ set(CCD_HDR
         include/ccd/gdrive/resource/gdrive_list.h
         include/ccd/gdrive/resource/gdrive_update.h)
 set(CCD_SRC
+        src/auth_utils.cpp
         src/executor.cpp
         src/utils.cpp
+
         src/gdrive/gdrive.cpp
         src/gdrive/model/gdrive_file.cpp
         src/gdrive/model/gdrive_permission.cpp
