@@ -1,6 +1,6 @@
 
 #include <ccd/auth_utils.h>
-#include <ccd/dropbox/resource/dropbox_list_folder.h>
+#include <ccd/dropbox/dropbox.h>
 
 #include <iostream>
 
@@ -39,35 +39,39 @@ pplx::task<web::http::client::http_client_config> auth()
 
 int main()
 {
-    auto client = auth().then([](web::http::client::http_client_config c)
-    {
-        return std::make_shared<web::http::client::http_client>("https://api.dropboxapi.com", c);
-    });
+    ccd::dropbox::dropbox d { auth() };
 
-    auto mdlst = ccd::dropbox::resource::files::list_folder{ client, "" }.set_recursive(true)
-                                                                         .set_include_deleted(true)
-                                                                         .set_include_media_info(true)
-                                                                         .set_limit(999)
-                                                                         .set_include_has_explicit_shared_members(false)
-                                                                         .exec().get();
+    auto mdlst = d.files_resource().list_folder_request("/tmp")
+                                   .set_recursive(true)
+                                   .set_include_deleted(true)
+                                   .set_include_media_info(true)
+                                   .set_limit(999)
+                                   .exec().get();
     while (true)
     {
         std::cerr << "-------\n";
         if (auto md = mdlst.get_entries())
         {
-            for (const auto& i: *md)
+            for (auto& i: *md)
             {
-                std::cerr << i.get_path_display().value_or("?")
-                          << "\t[" << i.get_id().value_or("?") << "]"
-                          << ", " << i.get_size().value_or(-1)
-                          << "\n";
+                if (auto mi = i.get_media_info())
+                {
+                    mi->set_time_taken("200-01-01T00:00:00Z");
+                    i.set_media_info(mi);
+                }
+
+                std::cerr << i.to_json().serialize() << "\n";
+                //std::cerr << i.get_path_display().value_or("?")
+                //          << "\t[" << i.get_id().value_or("?") << "]"
+                //          << ", " << i.get_size().value_or(-1)
+                //          << "\n";
             }
         }
 
         if (!mdlst.get_has_more().value_or(false))
             break;
 
-        mdlst = ccd::dropbox::resource::files::list_folder_continue{ client, *mdlst.get_cursor() }.exec().get();
+        mdlst = d.files_resource().list_folder_continue_request(*mdlst.get_cursor()).exec().get();
     }
 
     return 0;

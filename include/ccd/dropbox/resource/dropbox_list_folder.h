@@ -14,11 +14,13 @@ inline namespace v2
 namespace resource::files
 {
 
+class files;
+
 class list_folder : public executor
 {
-public:
-    list_folder(pplx::task<http_client_ptr> client, std::string path = "");
+    friend class files;
 
+public:
     list_folder& set_recursive(bool x);
     list_folder& set_include_media_info(bool x);
     list_folder& set_include_deleted(bool x);
@@ -31,18 +33,23 @@ public:
     pplx::task <model::metadata_list> exec();
 
 private:
+    list_folder(pplx::task<http_client_ptr> client, std::string path);
     web::http::http_request build_request() override;
+
     web::json::value m_json;
 };
 
 class list_folder_continue : public executor
 {
+    friend class files;
+
 public:
-    list_folder_continue(pplx::task<http_client_ptr> client, std::string cursor);
     pplx::task <model::metadata_list> exec();
 
 private:
+    list_folder_continue(pplx::task<http_client_ptr> client, std::string cursor);
     web::http::http_request build_request() override;
+
     web::json::value m_json;
 };
 
