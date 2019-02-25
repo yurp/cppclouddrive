@@ -74,5 +74,11 @@ int main()
         mdlst = d.files_resource().list_folder_continue_request(*mdlst.get_cursor()).exec().get();
     }
 
+    auto s = d.files_resource().download_request("/main.cpp").exec().get();
+    std::cerr << s << "\n";
+
+    s = d.files_resource().download_request("/main.cpp").set_range(5, 10).exec().get();
+    std::cerr << s << "\n";
+
     return 0;
 }
