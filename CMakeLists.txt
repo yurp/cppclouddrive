@@ -7,6 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(Boost REQUIRED COMPONENTS thread)
 find_package(cpprestsdk REQUIRED)
+find_package(RapidJSON REQUIRED)
 
 option(CCD_BUILD_EXAMPLES "build examples" OFF)
 option(CCD_BUILD_TESTS "build tests" OFF)

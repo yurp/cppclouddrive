@@ -4,11 +4,41 @@
 // (c) 2019 Iurii Pelykh
 // This code is licensed under MIT license
 
+#pragma once
+
+// (c) 2019 Iurii Pelykh
+// This code is licensed under MIT license
+
 #include <ccd/defs.h>
 
 #include <optional>
+#include <string>
+#include <unordered_map>
+#include <variant>
 
-namespace ccd::details
+namespace ccd
+{
+
+struct container
+{
+    using null_t = std::nullptr_t;
+    using bool_t = bool;
+    using string_t = std::string;
+    using int_t = int64_t;
+    using double_t = double;
+    using vector_t = std::vector<container>;
+    using map_t = std::unordered_map<std::string, container>;
+    using variant_t = std::variant<null_t, bool_t, string_t, int_t, double_t, vector_t, map_t>;
+
+    enum { null_i, bool_i, int_i, double_i, vector_i, map_i };
+
+    variant_t value;
+};
+
+container from_json(const std::string& s);
+container to_json(const std::string& s);
+
+namespace details
 {
 
 std::optional<string_list_t> create_string_list(web::json::value& js, std::string key);
@@ -33,7 +63,7 @@ std::optional<int64_t> get_int64(const web::json::value& js, std::string key);
 
 std::optional<int32_t> get_int32(const web::json::value& js, std::string key);
 
-template<typename T>
+template <typename T>
 void set_number(web::json::value& js, std::string key, std::optional<T> value)
 {
     auto k = utility::conversions::to_string_t(std::move(key));
@@ -46,25 +76,26 @@ void set_number(web::json::value& js, std::string key, std::optional<T> value)
     if (value)
     {
         js[k] = web::json::value::number(*value);
-    } else
+    }
+    else
     {
         js.erase(k);
     }
 }
 
-template<typename T>
+template <typename T>
 std::optional<T> create_object(web::json::value& js, std::string key)
 {
     auto k = utility::conversions::to_string_t(std::move(key));
     if (js.is_object() && js.has_field(k) && js.at(k).is_object())
     {
-        return T{ std::exchange(js.at(k), web::json::value{ }) };
+        return T { std::exchange(js.at(k), web::json::value { }) };
     }
 
     return std::nullopt;
 }
 
-template<typename T>
+template <typename T>
 void object_to_json(web::json::value& js, std::string key, const std::optional<T>& obj)
 {
     if (obj)
@@ -74,16 +105,16 @@ void object_to_json(web::json::value& js, std::string key, const std::optional<T
     }
 }
 
-template<typename T>
+template <typename T>
 std::optional<std::vector<T>> create_object_list(web::json::value& js, std::string key)
 {
     auto k = utility::conversions::to_string_t(std::move(key));
     if (js.is_object() && js.has_field(k) && js.at(k).is_array())
     {
-        std::optional<std::vector<T>> lst = std::vector<T>{ };
+        std::optional<std::vector<T>> lst = std::vector<T> { };
         for (auto& i: js.at(k).as_array())
         {
-            lst->emplace_back(std::exchange(i, web::json::value{ }));
+            lst->emplace_back(std::exchange(i, web::json::value { }));
         }
 
         return lst;
@@ -92,7 +123,7 @@ std::optional<std::vector<T>> create_object_list(web::json::value& js, std::stri
     return std::nullopt;
 }
 
-template<typename T>
+template <typename T>
 void object_list_to_json(web::json::value& js, std::string key, const std::optional<std::vector<T>>& lst)
 {
     if (lst)
@@ -108,4 +139,5 @@ void object_list_to_json(web::json::value& js, std::string key, const std::optio
     }
 }
 
+}
 }
