@@ -30,7 +30,15 @@ struct container
     using map_t = std::unordered_map<std::string, container>;
     using variant_t = std::variant<null_t, bool_t, string_t, int_t, double_t, vector_t, map_t>;
 
-    enum { null_i, bool_i, int_i, double_i, vector_i, map_i };
+    template <typename T>
+    bool is() const { return std::holds_alternative<T>(value); }
+
+    template <typename T>
+    T& as() { return std::get<T>(value); }
+
+    container& operator[](const char* s)        { return as<map_t>()[s]; }
+    container& operator[](const std::string& s) { return operator[](s.c_str()); }
+    container& operator[](size_t i) { return as<vector_t>()[i]; }
 
     variant_t value;
 };

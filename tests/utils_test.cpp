@@ -14,15 +14,12 @@ TEST(utils_test, parse_json_from_string)
                                   "a":[1, 2, 3, 4]
                                })");
 
-    ASSERT_TRUE(std::holds_alternative<ccd::container::map_t>(c.value));
+    ASSERT_TRUE(c.is<ccd::container::map_t>());
+    ASSERT_EQ(c.as<ccd::container::map_t>().size(), 7u);
 
-    const auto& m = std::get<ccd::container::map_t>(c.value);
-    ASSERT_EQ(m.size(), 7u);
-
-    ASSERT_EQ(m.count("hello"), 1);
-    const auto& hello = m.at("hello");
-    ASSERT_TRUE(std::holds_alternative<ccd::container::string_t>(hello.value));
-    ASSERT_EQ(std::get<ccd::container::string_t>(hello.value), "world");
+    ASSERT_EQ(c.as<ccd::container::map_t>().count("hello"), 1);
+    ASSERT_TRUE(c["hello"].is<ccd::container::string_t>());
+    ASSERT_EQ(c["hello"].as<ccd::container::string_t>(), "world");
 
     ASSERT_EQ(m.count("t"), 1);
     const auto& t = m.at("t");
