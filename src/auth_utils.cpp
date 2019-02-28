@@ -1,6 +1,8 @@
 
 #include <ccd/auth_utils.h>
 
+#include <ccd/utils.h>
+
 #include <cpprest/asyncrt_utils.h>
 #include <cpprest/http_listener.h>
 #include <cpprest/interopstream.h>
@@ -14,11 +16,11 @@ namespace ccd::auth_utils
 namespace
 {
 
-const utility::string_t root_path = utility::conversions::to_string_t("/");
-const utility::string_t access_token_field = utility::conversions::to_string_t("access_token");
-const utility::string_t refresh_token_field = utility::conversions::to_string_t("refresh_token");
-const utility::string_t token_type_field = utility::conversions::to_string_t("token_type");
-const utility::string_t scope_field = utility::conversions::to_string_t("scope");
+const std::string root_path = utility::conversions::to_string_t("/");
+const std::string access_token_field = utility::conversions::to_string_t("access_token");
+const std::string refresh_token_field = utility::conversions::to_string_t("refresh_token");
+const std::string token_type_field = utility::conversions::to_string_t("token_type");
+const std::string scope_field = utility::conversions::to_string_t("scope");
 
 const std::string gdrive_auth_uri = "https://accounts.google.com/o/oauth2/auth";
 const std::string gdrive_token_uri = "https://oauth2.googleapis.com/token";
@@ -28,16 +30,28 @@ const std::string gdrive_scope = "https://www.googleapis.com/auth/drive";
 const std::string dropbox_auth_uri = "https://www.dropbox.com/oauth2/authorize";
 const std::string dropbox_token_uri = "https://api.dropboxapi.com/oauth2/token";
 
-web::http::oauth2::experimental::oauth2_config make_oauth2(std::string app_id,
-                                                           std::string app_secret,
-                                                           std::string auth_uri,
-                                                           std::string token_uri,
-                                                           std::string redirect_uri = "",
-                                                           std::string scope = "")
+std::shared_ptr<web::http::oauth2::experimental::oauth2_config> make_oauth2(std::string app_id,
+                                                                            std::string app_secret,
+                                                                            std::string auth_uri,
+                                                                            std::string token_uri,
+                                                                            std::string redirect_uri = "",
+                                                                            std::string scope = "")
 {
     using namespace utility::conversions;
-    return { to_string_t(std::move(app_id)), to_string_t(std::move(app_secret)), to_string_t(std::move(auth_uri)),
-             to_string_t(std::move(token_uri)), to_string_t(std::move(redirect_uri)), to_string_t(std::move(scope)) };
+    using namespace web::http::oauth2::experimental;
+    return std::make_shared<oauth2_config>(to_string_t(std::move(app_id)), to_string_t(std::move(app_secret)),
+                                           to_string_t(std::move(auth_uri)), to_string_t(std::move(token_uri)),
+                                           to_string_t(std::move(redirect_uri)), to_string_t(std::move(scope)));
+}
+
+token to_token(const web::http::oauth2::experimental::oauth2_config& c)
+{
+    using namespace utility::conversions;
+    const auto& ot = c.token();
+    return { to_utf8string(ot.access_token()),
+             to_utf8string(ot.refresh_token()),
+             to_utf8string(ot.token_type()),
+             to_utf8string(ot.scope()) };
 }
 
 void open_browser(const std::string& auth_uri)
@@ -64,65 +78,57 @@ Concurrency::streams::stdio_istream<char>& acin()
 
 }
 
-void save_token(const web::http::oauth2::experimental::oauth2_token& token, const std::string& fname)
+void save_token(const token& t, const std::string& fname)
 {
     if (auto f = std::ofstream { fname })
     {
-        auto js = web::json::value::object();
-        js[access_token_field] = web::json::value { token.access_token() };
-        js[refresh_token_field] = web::json::value { token.refresh_token() };
-        js[token_type_field] = web::json::value { token.token_type() };
-        js[scope_field] = web::json::value { token.scope() };
+        ccd::var js { ccd::var::map_t { { access_token_field, t.access },
+                                        { access_token_field, t.refresh },
+                                        { access_token_field, t.type },
+                                        { access_token_field, t.scope }, }};
 
-        f << utility::conversions::to_utf8string(js.serialize());
+        f << ccd::to_json(js);
     }
 }
 
-web::http::oauth2::experimental::oauth2_token load_token(const std::string& fname)
+token load_token(const std::string& fname)
 {
-    using namespace utility::conversions;
-
-    web::http::oauth2::experimental::oauth2_token token;
+    token t;
     if (auto f = std::ifstream { fname })
     {
         std::string s;
         s.assign(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());
 
-        auto js = web::json::value::parse(to_string_t(s));
-        if (js.has_field(access_token_field))
+        auto js = ccd::from_json(s);
+
+        if (js.has(access_token_field))
         {
-            token.set_access_token(js[access_token_field].as_string());
+            t.access = js[access_token_field].as<std::string>();
         }
-        if (js.has_field(refresh_token_field))
+        if (js.has(refresh_token_field))
         {
-            token.set_refresh_token(js[refresh_token_field].as_string());
+            t.refresh = js[refresh_token_field].as<std::string>();
         }
-        if (js.has_field(token_type_field))
+        if (js.has(token_type_field))
         {
-            token.set_token_type(js[token_type_field].as_string());
+            t.type = js[token_type_field].as<std::string>();
         }
-        if (js.has_field(scope_field))
+        if (js.has(scope_field))
         {
-            token.set_scope(js[scope_field].as_string());
+            t.scope = js[scope_field].as<std::string>();
         }
     }
 
-    return token;
+    return t;
 }
 
-pplx::task<web::http::client::http_client_config> auth_auto(std::string app_id,
-                                                            std::string app_secret,
-                                                            std::string auth_uri,
-                                                            std::string token_uri,
-                                                            std::string redirect_uri,
-                                                            std::string scope,
-                                                            web::http::client::http_client_config conf)
+boost::future<token> auth_auto(std::string app_id, std::string app_secret, std::string auth_uri, std::string token_uri,
+                               std::string redirect_uri, std::string scope)
 {
     using namespace web::http;
 
-    conf.set_oauth2(make_oauth2(std::move(app_id), std::move(app_secret), std::move(auth_uri), std::move(token_uri),
-                                std::move(redirect_uri), std::move(scope)));
-    auto oauth2_conf = conf.oauth2();
+    auto oauth2_conf = make_oauth2(std::move(app_id), std::move(app_secret), std::move(auth_uri), std::move(token_uri),
+                                   std::move(redirect_uri), std::move(scope));
 
     pplx::task_completion_event<web::uri> redirected_uri_event;
     auto listener = std::make_shared<experimental::listener::http_listener>(oauth2_conf->redirect_uri());
@@ -139,7 +145,10 @@ pplx::task<web::http::client::http_client_config> auth_auto(std::string app_id,
         r.reply(web::http::status_codes::NotFound);
     });
 
-    return listener->open().then([oauth2_conf, redirected_uri_task = pplx::create_task(redirected_uri_event)]
+    boost::promise<token> p;
+    auto f = p.get_future();
+
+    listener->open().then([oauth2_conf, redirected_uri_task = pplx::create_task(redirected_uri_event)]
     {
         open_browser(oauth2_conf->build_authorization_uri(true));
         return redirected_uri_task;
@@ -152,107 +161,79 @@ pplx::task<web::http::client::http_client_config> auth_auto(std::string app_id,
     {
         return listener->close();
     })
-    .then([conf = std::move(conf), listener]
+    .then([listener, oauth2_conf, p = std::move(p)]() mutable
     {
-        return conf;
+        p.set_value(to_token(*oauth2_conf));
     });
+
+    return f;
 }
 
-pplx::task<web::http::client::http_client_config> auth_refresh(std::string app_id,
-                                                               std::string app_secret,
-                                                               std::string auth_uri,
-                                                               std::string token_uri,
-                                                               std::string refresh_token,
-                                                               web::http::client::http_client_config conf)
+boost::future<token> auth_refresh(std::string app_id, std::string app_secret, std::string auth_uri,
+                                  std::string token_uri, std::string refresh_token)
 {
-    conf.set_oauth2(make_oauth2(std::move(app_id), std::move(app_secret), std::move(auth_uri), std::move(token_uri)));
-    auto oauth2_conf = conf.oauth2();
+    auto oauth2_conf = make_oauth2(std::move(app_id), std::move(app_secret), std::move(auth_uri), std::move(token_uri));
     web::http::oauth2::experimental::oauth2_token t;
-    t.set_refresh_token(refresh_token);
+    t.set_refresh_token(utility::conversions::to_string_t(refresh_token));
     oauth2_conf->set_token(std::move(t));
-    return oauth2_conf->token_from_refresh().then([conf = std::move(conf)]
+
+    boost::promise<token> p;
+    auto f = p.get_future();
+
+    oauth2_conf->token_from_refresh().then([oauth2_conf, p = std::move(p)]() mutable
     {
-        return conf;
+        p.set_value(to_token(*oauth2_conf));
     });
+
+    return f;
 }
 
-web::http::client::http_client_config auth_access_token(std::string app_id,
-                                                        std::string app_secret,
-                                                        std::string auth_uri,
-                                                        std::string token_uri,
-                                                        std::string access_token,
-                                                        web::http::client::http_client_config conf)
-{
-    conf.set_oauth2(make_oauth2(std::move(app_id), std::move(app_secret), std::move(auth_uri), std::move(token_uri)));
-    conf.oauth2()->set_token(std::move(access_token));
-
-    return conf;
-}
-
-pplx::task<web::http::client::http_client_config> auth_manual(std::string app_id,
-                                                              std::string app_secret,
-                                                              std::string auth_uri,
-                                                              std::string token_uri,
-                                                              std::string redirect_uri,
-                                                              std::string scope,
-                                                              web::http::client::http_client_config conf)
+boost::future<token> auth_manual(std::string app_id, std::string app_secret, std::string auth_uri,
+                                 std::string token_uri, std::string redirect_uri, std::string scope)
 {
     using namespace utility::conversions;
 
-    conf.set_oauth2(make_oauth2(std::move(app_id), std::move(app_secret), std::move(auth_uri), std::move(token_uri),
-                                std::move(redirect_uri), std::move(scope)));
-    auto oauth2_conf = conf.oauth2();
+    auto oauth2_conf = make_oauth2(std::move(app_id), std::move(app_secret), std::move(auth_uri), std::move(token_uri),
+                                   std::move(redirect_uri), std::move(scope));
 
     std::cout << "go to:" << to_utf8string(oauth2_conf->build_authorization_uri(true)) << "\n"
               << "then paste input code here: ";
 
+    boost::promise<token> p;
+    auto f = p.get_future();
+
     auto code_buf = std::make_shared<Concurrency::streams::stringstreambuf>();
-    return acin().read_line(*code_buf).then([code_buf, oauth2_conf](size_t)
+    acin().read_line(*code_buf).then([code_buf, oauth2_conf](size_t)
     {
         return oauth2_conf->token_from_code(code_buf->collection());
     })
-    .then([conf = std::move(conf)]
+    .then([oauth2_conf, p = std::move(p)]() mutable
     {
-        return conf;
+        p.set_value(to_token(*oauth2_conf));
     });
+
+    return f;
 }
 
 namespace gdrive
 {
 
-pplx::task<web::http::client::http_client_config> auth_auto(std::string app_id,
-                                                            std::string app_secret,
-                                                            std::string redirect_uri,
-                                                            web::http::client::http_client_config conf)
+boost::future<token> auth_auto(std::string app_id, std::string app_secret, std::string redirect_uri)
 {
     return ccd::auth_utils::auth_auto(std::move(app_id), std::move(app_secret), gdrive_auth_uri, gdrive_token_uri,
-                                      std::move(redirect_uri), gdrive_scope, std::move(conf));
+                                      std::move(redirect_uri), gdrive_scope);
 }
 
-pplx::task<web::http::client::http_client_config> auth_refresh(std::string app_id,
-                                                               std::string app_secret,
-                                                               std::string refresh_token,
-                                                               web::http::client::http_client_config conf)
+boost::future<token> auth_refresh(std::string app_id, std::string app_secret, std::string refresh_token)
 {
     return ccd::auth_utils::auth_refresh(std::move(app_id), std::move(app_secret), gdrive_auth_uri, gdrive_token_uri,
-                                         std::move(refresh_token), std::move(conf));
+                                         std::move(refresh_token));
 }
 
-web::http::client::http_client_config auth_access_token(std::string app_id,
-                                                        std::string app_secret,
-                                                        std::string access_token,
-                                                        web::http::client::http_client_config conf)
-{
-    return ccd::auth_utils::auth_access_token(std::move(app_id), std::move(app_secret), gdrive_auth_uri,
-                                              gdrive_token_uri, std::move(access_token), std::move(conf));
-}
-
-pplx::task<web::http::client::http_client_config> auth_manual(std::string app_id,
-                                                              std::string app_secret,
-                                                              web::http::client::http_client_config conf)
+boost::future<token> auth_manual(std::string app_id, std::string app_secret)
 {
     return ccd::auth_utils::auth_manual(std::move(app_id), std::move(app_secret), gdrive_auth_uri, gdrive_token_uri,
-                                        gdrive_no_redirect_uri, gdrive_scope, std::move(conf));
+                                        gdrive_no_redirect_uri, gdrive_scope);
 }
 
 }

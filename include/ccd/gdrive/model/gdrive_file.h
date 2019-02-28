@@ -8,8 +8,6 @@
 #include <ccd/gdrive/model/gdrive_permission.h>
 #include <ccd/gdrive/model/gdrive_user.h>
 
-#include <cpprest/json.h>
-
 #include <optional>
 
 namespace ccd::gdrive
@@ -27,9 +25,9 @@ public:
     public:
         capabilities();
 
-        explicit capabilities(web::json::value js);
+        explicit capabilities(ccd::var js);
 
-        web::json::value to_json() const;
+        ccd::var to_json() const;
 
         std::optional<bool> get_can_add_children() const;
 
@@ -128,7 +126,7 @@ public:
         capabilities& set_can_untrash(std::optional<bool> x);
 
     private:
-        web::json::value m_json;
+        ccd::var m_json;
     };
 
     class content_hints
@@ -139,9 +137,9 @@ public:
         public:
             thumbnail();
 
-            explicit thumbnail(web::json::value js);
+            explicit thumbnail(ccd::var js);
 
-            web::json::value to_json() const;
+            ccd::var to_json() const;
 
             /// @brief The thumbnail data encoded with URL-safe Base64 (RFC 4648 section 5)
             std::optional<std::string> get_image() const;
@@ -154,14 +152,14 @@ public:
             thumbnail& set_mime_type(std::optional<std::string> x);
 
         private:
-            web::json::value m_json;
+            ccd::var m_json;
         };
 
         content_hints();
 
-        explicit content_hints(web::json::value js);
+        explicit content_hints(ccd::var js);
 
-        web::json::value to_json() const;
+        ccd::var to_json() const;
 
         std::optional<thumbnail> get_thumbnail() const;
 
@@ -172,7 +170,7 @@ public:
         content_hints& set_indexable_text(std::optional<std::string> x);
 
     private:
-        web::json::value m_json;
+        ccd::var m_json;
         std::optional<thumbnail> m_thumbnail;
     };
 
@@ -184,9 +182,9 @@ public:
         public:
             location();
 
-            explicit location(web::json::value js);
+            explicit location(ccd::var js);
 
-            web::json::value to_json() const;
+            ccd::var to_json() const;
 
             std::optional<double> get_latitude() const;
 
@@ -201,14 +199,14 @@ public:
             location& set_altitude(std::optional<double> x);
 
         private:
-            web::json::value m_json;
+            ccd::var m_json;
         };
 
         image_media_metadata();
 
-        explicit image_media_metadata(web::json::value js);
+        explicit image_media_metadata(ccd::var js);
 
-        web::json::value to_json() const;
+        ccd::var to_json() const;
 
         std::optional<int32_t> get_width() const;
 
@@ -295,7 +293,7 @@ public:
         image_media_metadata& set_lens(std::optional<std::string> x);
 
     private:
-        web::json::value m_json;
+        ccd::var m_json;
         std::optional<location> m_location;
     };
 
@@ -304,9 +302,9 @@ public:
     public:
         video_media_metadata();
 
-        explicit video_media_metadata(web::json::value js);
+        explicit video_media_metadata(ccd::var js);
 
-        web::json::value to_json() const;
+        ccd::var to_json() const;
 
         std::optional<int32_t> get_width() const;
 
@@ -321,14 +319,14 @@ public:
         video_media_metadata& get_duration_millis(std::optional<int64_t> x);
 
     private:
-        web::json::value m_json;
+        ccd::var m_json;
     };
 
     file();
 
-    explicit file(web::json::value js);
+    explicit file(ccd::var js);
 
-    web::json::value to_json() const;
+    ccd::var to_json() const;
 
     std::optional<std::string> get_id() const;
 
@@ -547,7 +545,7 @@ public:
     file& set_export_links(std::optional<key_value_list_t> x);
 
 private:
-    web::json::value m_json;
+    ccd::var m_json;
     std::optional<user> m_trashing_user;
     std::optional<string_list_t> m_parents;
     std::optional<key_value_list_t> m_properties;
@@ -572,9 +570,9 @@ class file_list
 public:
     file_list();
 
-    explicit file_list(web::json::value js);
+    explicit file_list(ccd::var js);
 
-    web::json::value to_json() const;
+    ccd::var to_json() const;
 
     std::optional<std::string> get_next_page_token() const;
 
@@ -589,7 +587,7 @@ public:
     file_list& set_files(std::optional<file_list_t> x);
 
 private:
-    web::json::value m_json;
+    ccd::var m_json;
     std::optional<file_list_t> m_files;
 };
 

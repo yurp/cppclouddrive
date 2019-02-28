@@ -2,60 +2,53 @@
 #include <ccd/utils.h>
 
 #include <rapidjson/reader.h>
+#include <rapidjson/prettywriter.h>
+#include <rapidjson/writer.h>
 
 #include <mutex>
 
 namespace ccd
 {
 
-container from_json(const std::string& s)
+var from_json(const std::string& s)
 {
-    using namespace std;
     using namespace rapidjson;
 
     struct handler
     {
-        bool Null()             { stack.back()->value = nullptr;                 finish(); return true; }
-        bool Bool(bool b)       { stack.back()->value = b;                       finish(); return true; }
-        bool Int(int i)         { stack.back()->value = static_cast<int64_t>(i); finish(); return true; }
-        bool Uint(unsigned u)   { stack.back()->value = static_cast<int64_t>(u); finish(); return true; }
-        bool Int64(int64_t i)   { stack.back()->value = static_cast<int64_t>(i); finish(); return true; }
-        bool Uint64(uint64_t u) { stack.back()->value = static_cast<int64_t>(u); finish(); return true; }
-        bool Double(double d)   { stack.back()->value =  d;                      finish(); return true; }
-        bool RawNumber(const char* str, SizeType length, bool copy) { return true; }
+        bool Null()             { *stack.back() = nullptr; finish(); return true; }
+        bool Bool(bool b)       { *stack.back() = b;       finish(); return true; }
+        bool Int(int i)         { *stack.back() = i;       finish(); return true; }
+        bool Uint(unsigned u)   { *stack.back() = u;       finish(); return true; }
+        bool Int64(int64_t i)   { *stack.back() = i;       finish(); return true; }
+        bool Uint64(uint64_t u) { *stack.back() = u;       finish(); return true; }
+        bool Double(double d)   { *stack.back() = d;       finish(); return true; }
+        bool RawNumber(const char*, SizeType, bool)                { return true; }
 
-        bool String(const char* str, SizeType length, bool copy)
+        bool String(const char* s, SizeType len, bool copy)
         {
-            stack.back()->value = std::string(str, str + length);
+            *stack.back() = std::string(s, s + len);
             finish();
             return true;
         }
-        bool StartObject()
+        bool StartObject()      { *stack.back() = var::map_t{};      return true; }
+        bool Key(const char* s, SizeType len, bool copy)
         {
-            stack.back()->value = container::map_t{};
+            stack.push_back(&(*stack.back())[std::string(s, s + len)]);
             return true;
         }
-        bool Key(const char* str, SizeType length, bool copy)
-        {
-            stack.push_back(&std::get<container::map_t>(stack.back()->value)[std::string(str, str + length)]);
-            return true;
-        }
-        bool EndObject(SizeType memberCount)
-        {
-            finish();
-            return true;
-        }
+        bool EndObject(SizeType memberCount)    {          finish(); return true; }
         bool StartArray()
         {
-            stack.back()->value = container::vector_t{};
-            std::get<container::vector_t>(stack.back()->value).emplace_back();
-            stack.push_back(&std::get<container::vector_t>(stack.back()->value).back());
+            *stack.back() = var::vector_t{};
+            stack.back()->as<var::vector_t>().emplace_back();
+            stack.push_back(&stack.back()->as<var::vector_t>().back());
             return true;
         }
         bool EndArray(SizeType elementCount)
         {
             stack.pop_back();
-            std::get<container::vector_t>(stack.back()->value).pop_back();
+            stack.back()->as<var::vector_t>().pop_back();
             finish();
             return true;
         }
@@ -63,15 +56,15 @@ container from_json(const std::string& s)
         void finish()
         {
             stack.pop_back();
-            if (!stack.empty() && std::holds_alternative<container::vector_t>(stack.back()->value))
+            if (!stack.empty() && stack.back()->is<var::vector_t>())
             {
-                std::get<container::vector_t>(stack.back()->value).emplace_back();
-                stack.push_back(&std::get<container::vector_t>(stack.back()->value).back());
+                stack.back()->as<var::vector_t>().emplace_back();
+                stack.push_back(&stack.back()->as<var::vector_t>().back());
             }
         }
 
-        container c { nullptr };
-        std::vector<container*> stack { &c };
+        var c { nullptr };
+        std::vector<var*> stack { &c };
     } h;
 
     Reader reader;
@@ -81,18 +74,78 @@ container from_json(const std::string& s)
     return h.c;
 }
 
+std::string to_json(const var& x)
+{
+    using namespace rapidjson;
+
+    struct visitor
+    {
+        void operator()(const var::null_t& )
+        {
+            w.Null();
+        }
+
+        void operator()(const var::bool_t& b)
+        {
+            w.Bool(b);
+        }
+
+        void operator()(const var::string_t& s)
+        {
+            w.String(s.c_str(), s.length());
+        }
+
+        void operator()(const var::int_t& i)
+        {
+            w.Int64(i);
+        }
+
+        void operator()(const var::double_t& d)
+        {
+            w.Double(d);
+        }
+
+        void operator()(const var::vector_t& v)
+        {
+            w.StartArray();
+            for (const auto& i: v)
+            {
+                std::visit(*this, i.x);
+            }
+            w.EndArray();
+        }
+
+        void operator()(const var::map_t& m)
+        {
+            w.StartObject();
+            for (const auto& kv: m)
+            {
+                w.Key(kv.first.c_str(), kv.first.length());
+                std::visit(*this, kv.second.x);
+            }
+            w.EndObject();
+        }
+
+        StringBuffer sb;
+        PrettyWriter<StringBuffer> w { sb };
+    } v;
+
+    std::visit(v, x.x);
+
+    return v.sb.GetString();
+}
+
 namespace details
 {
 
-std::optional<string_list_t> create_string_list(web::json::value& js, std::string key)
+std::optional<string_list_t> create_string_list(ccd::var& js, const std::string& key)
 {
-    auto k = utility::conversions::to_string_t(std::move(key));
-    if (js.is_object() && js.has_field(k) && js.at(k).is_array())
+    if (js.is<ccd::var::map_t>() && js.has(key) && js[key].is<ccd::var::vector_t>())
     {
         std::optional<string_list_t> lst = string_list_t { };
-        for (auto& i: js.at(k).as_array())
+        for (auto& i: js[key].as<ccd::var::vector_t>())
         {
-            lst->emplace_back(utility::conversions::to_utf8string(i.as_string()));
+            lst->emplace_back(i.as<ccd::var::string_t>());
         }
 
         return lst;
@@ -101,26 +154,24 @@ std::optional<string_list_t> create_string_list(web::json::value& js, std::strin
     return std::nullopt;
 }
 
-void string_list_to_json(web::json::value& js, std::string key, const std::optional<string_list_t>& lst)
+void string_list_to_json(ccd::var& js, const std::string& key, const std::optional<string_list_t>& lst)
 {
     if (lst)
     {
-        auto k = utility::conversions::to_string_t(std::move(key));
-        js[k] = web::json::value::array();
-        auto& js_arr = js[k];
-        int j = 0;
+        js[key] = ccd::var::vector_t{};
+        auto& js_arr = js[key].as<ccd::var::vector_t>();
         for (const auto& i: *lst)
         {
-            js_arr[j++] = web::json::value(utility::conversions::to_string_t(i));
+            js_arr.emplace_back(i);
         }
     }
 }
 
-std::optional<key_value_list_t> create_key_value_list(web::json::value& js, std::string key)
+std::optional<key_value_list_t> create_key_value_list(ccd::var& js, const std::string& key)
 {
-    using namespace utility::conversions;
-    auto k = to_string_t(std::move(key));
-    if (js.is_object() && js.has_field(k) && js.at(k).is_array())
+    // TODO: implement properly
+#if 0
+    if (js.is<ccd::var::map_t>() && js.has(key) && js[key].is<ccd::var::vector_t>())
     {
         std::optional<key_value_list_t> lst = key_value_list_t { };
         for (auto& kv: js.at(k).as_object())
@@ -130,12 +181,14 @@ std::optional<key_value_list_t> create_key_value_list(web::json::value& js, std:
 
         return lst;
     }
-
+#endif
     return std::nullopt;
 }
 
-void key_value_list_to_json(web::json::value& js, std::string key, const std::optional<key_value_list_t>& lst)
+void key_value_list_to_json(ccd::var& js, const std::string& key, const std::optional<key_value_list_t>& lst)
 {
+// TODO: implement properly
+#if 0
     if (lst)
     {
         auto k = utility::conversions::to_string_t(std::move(key));
@@ -146,129 +199,7 @@ void key_value_list_to_json(web::json::value& js, std::string key, const std::op
             js_obj[i.first] = web::json::value(utility::conversions::to_string_t(i.second));
         }
     }
-}
-
-
-std::optional<std::string> get_string(const web::json::value& js, std::string key)
-{
-    auto k = utility::conversions::to_string_t(std::move(key));
-
-    if (js.is_object() && js.has_field(k) && js.at(k).is_string())
-    {
-        return utility::conversions::to_utf8string(js.at(k).as_string());
-    }
-
-    return std::nullopt;
-}
-
-void set_string(web::json::value& js, std::string key, std::optional<std::string> value)
-{
-    auto k = utility::conversions::to_string_t(std::move(key));
-
-    if (!js.is_object())
-    {
-        return;
-    }
-
-    if (value)
-    {
-        js[k] = web::json::value::string(utility::conversions::to_string_t(*value));
-    }
-    else
-    {
-        js.erase(k);
-    }
-}
-
-std::optional<bool> get_bool(const web::json::value& js, std::string key)
-{
-    auto k = utility::conversions::to_string_t(std::move(key));
-
-    if (js.is_object() && js.has_field(k) && js.at(k).is_boolean())
-    {
-        return js.at(k).as_bool();
-    }
-
-    return std::nullopt;
-}
-
-void set_bool(web::json::value& js, std::string key, std::optional<bool> value)
-{
-    auto k = utility::conversions::to_string_t(std::move(key));
-
-    if (!js.is_object())
-    {
-        return;
-    }
-
-    if (value)
-    {
-        js[k] = web::json::value::boolean(*value);
-    }
-    else
-    {
-        js.erase(k);
-    }
-}
-
-std::optional<double> get_double(const web::json::value& js, std::string key)
-{
-    auto k = utility::conversions::to_string_t(std::move(key));
-
-    if (js.is_object() && js.has_field(k))
-    {
-        if (js.at(k).is_double())
-        {
-            return js.at(k).as_double();
-        }
-        else
-        {
-            auto s = utility::conversions::to_utf8string(js.at(k).as_string());
-            return std::stod(s);
-        }
-    }
-
-    return std::nullopt;
-}
-
-std::optional<int64_t> get_int64(const web::json::value& js, std::string key)
-{
-    auto k = utility::conversions::to_string_t(std::move(key));
-
-    if (js.is_object() && js.has_field(k))
-    {
-        if (js.at(k).is_number())
-        {
-            return js.at(k).as_number().to_int64();
-        }
-        else
-        {
-            auto s = utility::conversions::to_utf8string(js.at(k).as_string());
-            return std::stoll(s);
-        }
-    }
-
-    return std::nullopt;
-}
-
-std::optional<int32_t> get_int32(const web::json::value& js, std::string key)
-{
-    auto k = utility::conversions::to_string_t(std::move(key));
-
-    if (js.is_object() && js.has_field(k))
-    {
-        if (js.at(k).is_number())
-        {
-            return js.at(k).as_number().to_int32();
-        }
-        else
-        {
-            auto s = utility::conversions::to_utf8string(js.at(k).as_string());
-            return std::stoi(s);
-        }
-    }
-
-    return std::nullopt;
+#endif
 }
 
 }

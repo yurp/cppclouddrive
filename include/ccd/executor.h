@@ -4,7 +4,14 @@
 // (c) 2019 Iurii Pelykh
 // This code is licensed under MIT license
 
-#include <ccd/defs.h>
+#include <ccd/utils.h>
+
+#define BOOST_THREAD_VERSION 5
+#define BOOST_THREAD_PROVIDES_FUTURE
+#define BOOST_THREAD_PROVIDES_FUTURE_CONTINUATION
+#define BOOST_THREAD_PROVIDES_FUTURE_WHEN_ALL_WHEN_ANY
+#define BOOST_THREAD_PROVIDES_FUTURE_UNWRAP
+#include <boost/thread.hpp>
 
 #include <exception>
 
@@ -25,69 +32,78 @@ private:
     std::string m_msg;
 };
 
+class http_executor
+{
+public:
+    virtual ~http_executor() {}
+
+    virtual boost::future<std::string> exec() = 0;
+
+    virtual void reset() = 0;
+
+    virtual void set_endpoint(const std::string& x) = 0;
+    virtual void set_method(const std::string& x) = 0;
+    virtual void append_path(const std::string& x) = 0;
+    virtual void append_query(const std::string& k, const std::string& v) = 0;
+    virtual void set_oauth2_token(const std::string& x) = 0;
+    virtual void add_header(const std::string& k, const std::string& v) = 0;
+    virtual void set_body(const std::string& t, const std::string& x) = 0;
+};
+
+class cpprest_executor : public http_executor
+{
+public:
+    boost::future<std::string> exec() override;
+
+    void reset() override;
+
+    void set_endpoint(const std::string& x) override;
+    void set_method(const std::string& x) override;
+    void append_path(const std::string& x) override;
+    void append_query(const std::string& k, const std::string& v) override;
+    void set_oauth2_token(const std::string& x) override;
+    void add_header(const std::string& k, const std::string& v) override;
+    void set_body(const std::string& t, const std::string& x) override;
+
+private:
+    std::string m_endpoint;
+    std::string m_method;
+    std::vector<std::string> m_path;
+    std::vector<std::pair<std::string, std::string>> m_queries;
+    std::string m_token;
+    std::vector<std::pair<std::string, std::string>> m_headers;
+    std::pair<std::string, std::string> m_body;
+
+};
+
 class executor
 {
 public:
-    explicit executor(pplx::task<http_client_ptr> client_task);
+    using executor_ptr = std::shared_ptr<http_executor>;
 
-    pplx::task<std::string> exec_raw_string();
-    pplx::task<web::json::value> exec_raw_json();
+    boost::future<std::string> exec_raw_string();
+    boost::future<ccd::var> exec_raw_json();
 
     template<typename T>
-    pplx::task<T> exec_custom();
+    boost::future<T> exec_custom();
 
 private:
-    template <typename T, pplx::task<T>(web::http::http_response::*func)(bool) const>
-    pplx::task<T> exec_raw();
+    //template <typename T>
+    //static boost::future<T> throw_executor_exception(const web::http::http_response& resp);
 
-    template <typename T>
-    static pplx::task<T> throw_executor_exception(const web::http::http_response& resp);
-
-    virtual web::http::http_request build_request() = 0;
-
-    pplx::task<http_client_ptr> m_client_task;
+    virtual boost::future<executor_ptr> build_request() = 0;
 };
 
 template<typename T>
-pplx::task<T> executor::exec_custom()
+boost::future<T> executor::exec_custom()
 {
-    return exec_raw_json().then([](pplx::task<web::json::value> js_task)
+    return exec_raw_json().then([](boost::future<ccd::var> jsf)
     {
-        try
-        {
-            auto js = js_task.get();
-            return pplx::task_from_result(T { std::move(js) });
-        }
-        catch (...)
-        {
-            return pplx::task_from_exception<T>(std::current_exception());
-        }
+        auto js = jsf.get();
+        return T { std::move(js) };
     });
 }
-
-template <typename T, pplx::task<T>(web::http::http_response::*func)(bool) const>
-pplx::task<T> executor::exec_raw()
-{
-    return m_client_task.then([r = build_request()](http_client_ptr c)
-    {
-        return c->request(r);
-    })
-    .then([](pplx::task<web::http::http_response> resp_task)
-    {
-        try
-        {
-            auto resp = resp_task.get();
-            auto code = resp.status_code();
-            return (code >= 200 && code < 300) ? (resp.*func)(true)
-                                               : throw_executor_exception<T>(resp);
-        }
-        catch (...)
-        {
-            return pplx::task_from_exception<T>(std::current_exception());
-        }
-    });
-}
-
+#if 0
 template <typename T>
 pplx::task<T> executor::throw_executor_exception(const web::http::http_response& resp)
 {
@@ -108,5 +124,5 @@ pplx::task<T> executor::throw_executor_exception(const web::http::http_response&
         return pplx::task_from_exception<T>(executor_exception{ code, msg });
     });
 }
-
+#endif
 }

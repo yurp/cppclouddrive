@@ -5,8 +5,7 @@
 // This code is licensed under MIT license
 
 #include <ccd/defs.h>
-
-#include <cpprest/json.h>
+#include <ccd/utils.h>
 
 #include <optional>
 
@@ -22,9 +21,9 @@ class user
 public:
     user();
 
-    explicit user(web::json::value js);
+    explicit user(ccd::var js);
 
-    web::json::value to_json() const;
+    ccd::var to_json() const;
 
     std::optional<std::string> get_display_name() const;
 
@@ -47,7 +46,7 @@ public:
     user& set_email_address(std::optional<std::string> x);
 
 private:
-    web::json::value m_json;
+    ccd::var m_json;
 };
 
 using user_list_t = std::vector<user>;
