@@ -13,8 +13,6 @@
 namespace ccd
 {
 
-using http_client_ptr = std::shared_ptr<web::http::client::http_client>;
-
 using key_value_list_t = std::vector<std::pair<std::string, std::string>>;
 using string_list_t = std::vector<std::string>;
 using timestamp_t = std::string;

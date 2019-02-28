@@ -38,18 +38,18 @@ boost::future<std::string> cpprest_executor::exec()
     auto f = p.get_future();
 
     web::uri_builder ub;
-    for (const auto p: m_path)
+    for (const auto& pt: m_path)
     {
-        ub.append_path(to_string_t(p));
+        ub.append_path(to_string_t(pt));
     }
-    for (const auto q: m_queries)
+    for (const auto& q: m_queries)
     {
         ub.append_query(to_string_t(q.first), to_string_t(q.second));
     }
 
     web::http::http_request r { to_string_t(m_method) };
     r.headers().add(to_string_t("Authorization"), to_string_t("Bearer " + m_token));
-    for (const auto h: m_headers)
+    for (const auto& h: m_headers)
     {
         r.headers().add(to_string_t(h.first), to_string_t(h.second));
     }
@@ -57,13 +57,26 @@ boost::future<std::string> cpprest_executor::exec()
     r.set_request_uri(ub.to_uri());
 
     web::http::client::http_client c { to_string_t(m_endpoint) };
-    c.request(r).then([](pplx::task<web::http::http_response> resp)
+    c.request(r).then([](web::http::http_response resp)
     {
-        return resp.get().extract_utf8string(true);
+        auto code = resp.status_code();
+        if (code < 200 || code >= 300)
+        {
+            throw executor_exception { code };
+        }
+
+        return resp.extract_utf8string(true);
     })
     .then([p = std::move(p)](pplx::task<std::string> s) mutable
     {
-        p.set_value(s.get());
+        try
+        {
+            p.set_value(s.get());
+        }
+        catch (...)
+        {
+            p.set_exception(std::current_exception()); // TODO: looks like set_exception() can throw
+        }
     });
 
     return f;

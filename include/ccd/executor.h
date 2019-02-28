@@ -50,6 +50,9 @@ public:
     virtual void set_body(const std::string& t, const std::string& x) = 0;
 };
 
+using http_executor_ptr = std::shared_ptr<http_executor>;
+using http_executor_factory = std::function<http_executor_ptr()>;
+
 class cpprest_executor : public http_executor
 {
 public:
