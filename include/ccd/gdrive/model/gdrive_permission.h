@@ -26,7 +26,7 @@ public:
 
         explicit teamdrive_permission_details(ccd::var js);
 
-        web::json::value to_json() const;
+        ccd::var to_json() const;
 
         std::optional<std::string> get_teamdrive_permission_type() const;
 

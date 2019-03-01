@@ -14,12 +14,12 @@ inline namespace v3
 class gdrive
 {
 public:
-    explicit gdrive(pplx::task<http_client_ptr> client);
+    explicit gdrive(boost::shared_future<std::string> token);
 
     resource::files::files files_resource();
 
 private:
-    pplx::task<http_client_ptr> m_client;
+    boost::shared_future<std::string> m_token;
 };
 
 }

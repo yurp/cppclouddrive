@@ -50,13 +50,14 @@ public:
     /// @brief Whether the requesting application supports Team Drives
     list& set_team_drive_id(std::optional<std::string> x);
 
-    pplx::task<model::file_list> exec();
+    boost::future<model::file_list> exec();
 
 private:
-    list(pplx::task<http_client_ptr> client);
+    list(boost::shared_future<std::string> token);
 
-    web::http::http_request build_request() override;
+    boost::future<executor::executor_ptr> build_request() override;
 
+    boost::shared_future<std::string> m_token;
     std::optional<std::string> m_corpora;
     std::optional<std::string> m_corpus;
     std::optional<bool> m_include_team_drive_items;

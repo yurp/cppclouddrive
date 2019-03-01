@@ -75,7 +75,7 @@ permission::teamdrive_permission_details& permission::teamdrive_permission_detai
 // ---------------------------------------------------------------------------------------------------------------------
 
 permission::permission()
-    : m_json(web::json::value::object())
+    : m_json(ccd::var::map_t())
     , m_teamdrive_permission_details(std::nullopt)
 {
 

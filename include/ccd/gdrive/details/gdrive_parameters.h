@@ -4,7 +4,7 @@
 // (c) 2019 Iurii Pelykh
 // This code is licensed under MIT license
 
-#include <cpprest/uri_builder.h>
+#include <ccd/executor.h>
 
 #include <optional>
 #include <string>
@@ -52,18 +52,18 @@ public:
     }
 
 protected:
-    void add_common_parameters(web::uri_builder &ub)
+    void add_common_parameters(http_executor& e)
     {
         if (m_fields)
-            ub.append_query("fields", *m_fields);
+            e.append_query("fields", *m_fields);
         if (m_alt)
-            ub.append_query("alt", *m_alt);
+            e.append_query("alt", *m_alt);
         if (m_pretty_print)
-            ub.append_query("prettyPrint", *m_pretty_print ? "true" : "false");
+            e.append_query("prettyPrint", *m_pretty_print ? "true" : "false");
         if (m_quota_user)
-            ub.append_query("quotaUser", *m_quota_user);
+            e.append_query("quotaUser", *m_quota_user);
         if (m_user_ip)
-            ub.append_query("userIp", *m_user_ip);
+            e.append_query("userIp", *m_user_ip);
     }
 
 private:
@@ -86,11 +86,11 @@ public:
     }
 
 protected:
-    void add_file_parameters(web::uri_builder &ub)
+    void add_file_parameters(http_executor& e)
     {
-        this->add_common_parameters(ub);
+        this->add_common_parameters(e);
         if (m_support_team_drives)
-            ub.append_query("supportsTeamDrives", *m_support_team_drives ? "true" : "false");
+            e.append_query("supportsTeamDrives", *m_support_team_drives ? "true" : "false");
     }
 
 private:
@@ -116,13 +116,13 @@ public:
     }
 
 protected:
-    void add_change_file_parameters(web::uri_builder &ub)
+    void add_change_file_parameters(http_executor& e)
     {
-        this->add_file_parameters(ub);
+        this->add_file_parameters(e);
         if (m_keep_revision_forever)
-            ub.append_query("keepRevisionForever", *m_keep_revision_forever ? "true" : "false");
+            e.append_query("keepRevisionForever", *m_keep_revision_forever ? "true" : "false");
         if (m_ocr_language)
-            ub.append_query("ocrLanguage", *m_ocr_language);
+            e.append_query("ocrLanguage", *m_ocr_language);
     }
 
 private:
@@ -142,10 +142,10 @@ public:
     }
 
 protected:
-    void add_ignore_default_visibility_parameter(web::uri_builder &ub)
+    void add_ignore_default_visibility_parameter(http_executor& e)
     {
         if (m_ignore_default_visibility)
-            ub.append_query("ignoreDefaultVisibility", *m_ignore_default_visibility ? "true" : "false");
+            e.append_query("ignoreDefaultVisibility", *m_ignore_default_visibility ? "true" : "false");
     }
 
 private:
@@ -164,10 +164,10 @@ public:
     }
 
 protected:
-    void add_use_content_as_indexable_text_parameter(web::uri_builder &ub)
+    void add_use_content_as_indexable_text_parameter(http_executor& e)
     {
         if (m_use_content_as_indexable_text)
-            ub.append_query("ignoreDefaultVisibility", *m_use_content_as_indexable_text ? "true" : "false");
+            e.append_query("ignoreDefaultVisibility", *m_use_content_as_indexable_text ? "true" : "false");
     }
 
 private:

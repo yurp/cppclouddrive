@@ -46,6 +46,8 @@ struct var
     var(map_t x) : x(std::move(x)) {}
     var(variant_t x) : x(std::move(x)) {}
 
+    var& operator=(const var& y) { x = y.x; return *this; }
+    var& operator=(var&& y) { x = std::move(y.x); return *this; }
     var& operator=(const null_t& ) { x = nullptr; return *this; }
     var& operator=(bool_t y) { x = y; return *this; }
     var& operator=(string_t y) { x = (std::move(y)) ; return *this; }

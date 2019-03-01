@@ -48,9 +48,9 @@ public:
     update update_request(std::string file_id);
 
 private:
-    explicit files(pplx::task<http_client_ptr> client);
+    explicit files(boost::shared_future<std::string> token);
 
-    pplx::task<http_client_ptr> m_client;
+    boost::shared_future<std::string> m_token;
 };
 
 }

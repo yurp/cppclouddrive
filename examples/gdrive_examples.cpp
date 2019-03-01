@@ -14,7 +14,7 @@
 #define GDRIVE_SECRET_KEY ""
 #endif
 
-pplx::task<web::http::client::http_client_config> auth()
+boost::future<ccd::auth_utils::token> auth()
 {
     using namespace ccd::auth_utils;
     using namespace utility::conversions;
@@ -24,21 +24,22 @@ pplx::task<web::http::client::http_client_config> auth()
     std::string redirect_uri = "http://localhost:25000/";
 
     auto token = ccd::auth_utils::load_token(token_file);
-    if (!token.refresh_token().empty())
+    if (!token.refresh.empty())
     {
-        return gdrive::auth_refresh(GDRIVE_APP_ID, GDRIVE_SECRET_KEY, to_utf8string(token.refresh_token()));
+        return gdrive::auth_refresh(GDRIVE_APP_ID, GDRIVE_SECRET_KEY, token.refresh);
     }
 
-    if (!token.access_token().empty())
+    if (!token.access.empty())
     {
-        return pplx::task_from_result(gdrive::auth_access_token(GDRIVE_APP_ID, GDRIVE_SECRET_KEY,
-                                                                to_utf8string(token.access_token())));
+        return boost::make_ready_future(token);
     }
 
-    return gdrive::auth_auto(GDRIVE_APP_ID, GDRIVE_SECRET_KEY, redirect_uri).then([token_file](http_client_config c)
+    return gdrive::auth_auto(GDRIVE_APP_ID, GDRIVE_SECRET_KEY, redirect_uri)
+           .then([token_file](boost::future<ccd::auth_utils::token> tf)
     {
-        ccd::auth_utils::save_token(c.oauth2()->token(), token_file);
-        return c;
+        auto t = tf.get();
+        ccd::auth_utils::save_token(t, token_file);
+        return t;
     });
 }
 
@@ -91,12 +92,12 @@ void print_getting_started_content(ccd::gdrive::v3::resource::files::files& file
 
 int main()
 {
-    auto client = auth().then([](web::http::client::http_client_config c)
+    auto at = auth().then([](boost::future<ccd::auth_utils::token> t)
     {
-        return std::make_shared<web::http::client::http_client>("https://www.googleapis.com", c);
-    });
+        return t.get().access;
+    }).share();
 
-    ccd::gdrive::gdrive g { client };
+    ccd::gdrive::gdrive g { at };
     auto files_rsc = g.files_resource();
 
     list_root_dir(files_rsc);

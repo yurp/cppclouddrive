@@ -26,13 +26,14 @@ public:
     /// @brief The ID of the file
     del& set_file_id(std::string x);
 
-    pplx::task<void> exec();
+    boost::future<void> exec();
 
 private:
-    del(pplx::task<http_client_ptr> client, std::string file_id);
+    del(boost::shared_future<std::string> token, std::string file_id);
 
-    web::http::http_request build_request() override;
+    boost::future<executor::executor_ptr> build_request() override;
 
+    boost::shared_future<std::string> m_token;
     std::string m_file_id;
 };
 

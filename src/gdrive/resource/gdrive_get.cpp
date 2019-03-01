@@ -8,8 +8,8 @@ inline namespace v3
 namespace resource::files
 {
 
-get::get(pplx::task<http_client_ptr> client, std::string file_id)
-    : executor(std::move(client))
+get::get(boost::shared_future<std::string> token, std::string file_id)
+    : m_token(std::move(token))
     , m_file_id(std::move(file_id))
 {
 
@@ -27,41 +27,47 @@ get& get::set_acknowledge_abuse(std::optional<bool> x)
     return *this;
 }
 
-pplx::task<std::string> get::exec_media()
+boost::future<std::string> get::exec_media()
 {
     set_alt("media");
     m_range = std::nullopt;
     return exec_raw_string();
 }
 
-pplx::task<std::string> get::exec_media(int64_t offset, int64_t sz)
+boost::future<std::string> get::exec_media(int64_t offset, int64_t sz)
 {
     set_alt("media");
     m_range = std::make_pair(offset, offset + sz - 1);
     return exec_raw_string();
 }
 
-pplx::task<model::file> get::exec()
+boost::future<model::file> get::exec()
 {
     set_alt(std::nullopt);
     m_range = std::nullopt;
     return exec_custom<model::file>();
 }
 
-web::http::http_request get::build_request()
+boost::future<executor::executor_ptr> get::build_request()
 {
-    auto ub = web::uri_builder{ }.set_path("/drive/v3/files").append_path(m_file_id);
-    add_file_parameters(ub);
+    std::shared_ptr<http_executor> e = std::make_shared<cpprest_executor>();
+    e->set_method("GET");
+    e->set_endpoint("https://www.googleapis.com");
+    e->append_path("/drive/v3/files");
+    e->append_path(m_file_id);
+    add_file_parameters(*e);
 
     if (m_acknowledge_abuse)
-        ub.append_query("acknowledgeAbuse", *m_acknowledge_abuse ? "true" : "false");
+        e->append_query("acknowledgeAbuse", *m_acknowledge_abuse ? "true" : "false");
 
-    web::http::http_request r;
-    r.set_request_uri(ub.to_uri());
     if (m_range)
-        r.headers().add("Range", "bytes=" + std::to_string(m_range->first) + "-" + std::to_string(m_range->second));
+        e->add_header("Range", "bytes=" + std::to_string(m_range->first) + "-" + std::to_string(m_range->second));
 
-    return r;
+    return m_token.then([e = std::move(e)](boost::shared_future<std::string> t)
+    {
+        e->set_oauth2_token(t.get());
+        return e;
+    });
 }
 
 }

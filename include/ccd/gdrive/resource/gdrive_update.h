@@ -33,16 +33,17 @@ public:
     /// @brief A comma-separated list of parent IDs to remove
     update& set_remove_parents(std::optional<std::string> x);
 
-    pplx::task<model::file> exec();
+    boost::future<model::file> exec();
 
 private:
-    update(pplx::task<http_client_ptr> client,
+    update(boost::shared_future<std::string> token,
            std::string file_id,
            std::optional<model::file> metadata_patch,
            std::optional<std::string> media_content);
 
-    web::http::http_request build_request() override;
+    boost::future<executor::executor_ptr> build_request() override;
 
+    boost::shared_future<std::string> m_token;
     std::string m_file_id;
     std::optional<model::file> m_metadata_patch;
     std::optional<std::string> m_media_content;

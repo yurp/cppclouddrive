@@ -413,19 +413,19 @@ std::optional<double> file::image_media_metadata::location::get_altitude() const
 
 file::image_media_metadata::location& file::image_media_metadata::location::set_latitude(std::optional<double> x)
 {
-    details::set_number<double>(m_json, "latitude", x);
+    details::set_value<double>(m_json, "latitude", x);
     return *this;
 }
 
 file::image_media_metadata::location& file::image_media_metadata::location::set_longitude(std::optional<double> x)
 {
-    details::set_number<double>(m_json, "longitude", x);
+    details::set_value<double>(m_json, "longitude", x);
     return *this;
 }
 
 file::image_media_metadata::location& file::image_media_metadata::location::set_altitude(std::optional<double> x)
 {
-    details::set_number<double>(m_json, "altitude", x);
+    details::set_value<double>(m_json, "altitude", x);
     return *this;
 }
 
@@ -560,19 +560,19 @@ std::optional <std::string> file::image_media_metadata::get_lens() const
 
 file::image_media_metadata& file::image_media_metadata::set_width(std::optional <int32_t> x)
 {
-    details::set_number(m_json, "width", x);
+    details::set_value<ccd::var::int_t>(m_json, "width", x);
     return *this;
 }
 
 file::image_media_metadata& file::image_media_metadata::set_height(std::optional <int32_t> x)
 {
-    details::set_number(m_json, "height", x);
+    details::set_value<ccd::var::int_t>(m_json, "height", x);
     return *this;
 }
 
 file::image_media_metadata& file::image_media_metadata::set_rotation(std::optional <int32_t> x)
 {
-    details::set_number(m_json, "rotation", x);
+    details::set_value<ccd::var::int_t>(m_json, "rotation", x);
     return *this;
 }
 
@@ -603,13 +603,13 @@ file::image_media_metadata& file::image_media_metadata::set_camera_model(std::op
 
 file::image_media_metadata& file::image_media_metadata::set_exposure_time(std::optional<double> x)
 {
-    details::set_number(m_json, "exposureTime", x);
+    details::set_value<double>(m_json, "exposureTime", x);
     return *this;
 }
 
 file::image_media_metadata& file::image_media_metadata::set_aperture(std::optional<double> x)
 {
-    details::set_number(m_json, "aperture", x);
+    details::set_value<double>(m_json, "aperture", x);
     return *this;
 }
 
@@ -621,13 +621,13 @@ file::image_media_metadata& file::image_media_metadata::set_flash_used(std::opti
 
 file::image_media_metadata& file::image_media_metadata::set_focal_length(std::optional<double> x)
 {
-    details::set_number(m_json, "focalLength", x);
+    details::set_value<double>(m_json, "focalLength", x);
     return *this;
 }
 
 file::image_media_metadata& file::image_media_metadata::set_iso_lpeed(std::optional <int32_t> x)
 {
-    details::set_number(m_json, "isoSpeed", x);
+    details::set_value<ccd::var::int_t>(m_json, "isoSpeed", x);
     return *this;
 }
 
@@ -663,19 +663,19 @@ file::image_media_metadata& file::image_media_metadata::set_white_balance(std::o
 
 file::image_media_metadata& file::image_media_metadata::set_exposure_bias(std::optional<double> x)
 {
-    details::set_number(m_json, "exposureBias", x);
+    details::set_value<double>(m_json, "exposureBias", x);
     return *this;
 }
 
 file::image_media_metadata& file::image_media_metadata::set_max_aperture_value(std::optional<double> x)
 {
-    details::set_number(m_json, "maxApertureValue", x);
+    details::set_value<double>(m_json, "maxApertureValue", x);
     return *this;
 }
 
 file::image_media_metadata& file::image_media_metadata::set_subject_distance(std::optional <int32_t> x)
 {
-    details::set_number(m_json, "subjectDistance", x);
+    details::set_value<ccd::var::int_t>(m_json, "subjectDistance", x);
     return *this;
 }
 
@@ -721,19 +721,19 @@ std::optional <int64_t> file::video_media_metadata::get_duration_millis() const
 
 file::video_media_metadata& file::video_media_metadata::get_width(std::optional <int32_t> x)
 {
-    details::set_number(m_json, "width", x);
+    details::set_value<ccd::var::int_t>(m_json, "width", x);
     return *this;
 }
 
 file::video_media_metadata& file::video_media_metadata::get_heigth(std::optional <int32_t> x)
 {
-    details::set_number(m_json, "height", x);
+    details::set_value<ccd::var::int_t>(m_json, "height", x);
     return *this;
 }
 
 file::video_media_metadata& file::video_media_metadata::get_duration_millis(std::optional <int64_t> x)
 {
-    details::set_number(m_json, "durationMillis", x);
+    details::set_value<ccd::var::int_t>(m_json, "durationMillis", x);
     return *this;
 }
 

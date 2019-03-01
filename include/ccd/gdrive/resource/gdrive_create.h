@@ -25,13 +25,14 @@ class create : public executor,
     friend class files;
 
 public:
-    pplx::task<model::file> exec();
+    boost::future<model::file> exec();
 
 private:
-    create(pplx::task<http_client_ptr> client, model::file metadata, std::optional<std::string> media_content);
+    create(boost::shared_future<std::string> token, model::file metadata, std::optional<std::string> media_content);
 
-    web::http::http_request build_request() override;
+    boost::future<executor::executor_ptr> build_request() override;
 
+    boost::shared_future<std::string> m_token;
     model::file m_metadata;
     std::optional<std::string> m_media_content;
 };

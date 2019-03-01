@@ -29,17 +29,18 @@ public:
     /// @brief Whether the user is acknowledging the risk of downloading known malware or other abusive files
     get& set_acknowledge_abuse(std::optional<bool> x);
 
-    pplx::task<std::string> exec_media();
+    boost::future<std::string> exec_media();
 
-    pplx::task<std::string> exec_media(int64_t offset, int64_t sz);
+    boost::future<std::string> exec_media(int64_t offset, int64_t sz);
 
-    pplx::task<model::file> exec();
+    boost::future<model::file> exec();
 
 private:
-    get(pplx::task<http_client_ptr> client, std::string file_id);
+    get(boost::shared_future<std::string> token, std::string file_id);
 
-    web::http::http_request build_request() override;
+    boost::future<executor::executor_ptr> build_request() override;
 
+    boost::shared_future<std::string> m_token;
     std::string m_file_id;
     std::optional<bool> m_acknowledge_abuse;
     std::optional<std::pair<int64_t, int64_t>> m_range;
