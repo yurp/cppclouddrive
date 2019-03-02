@@ -15,7 +15,8 @@ Usage example (list Google Drive root directory):
     ccd::auth::oauth2::gdrive::automatic(GDRIVE_APP_ID, GDRIVE_SECRET_KEY, "http://localhost:25000/")
         .then([](boost::future<ccd::auth::oauth2::token> t)
         {
-           ccd::http::authorized_oauth2_transport_factory f { t.get().access, ccd::http::cpprest_transport_factory{} };
+           ccd::http::authorized_oauth2_transport_factory f { t.get().access, 
+                                                              ccd::http::cpprest_transport_factory{} };
            return ccd::gdrive::gdrive { std::move(f) };
         })
         .then([](boost::future<ccd::gdrive::gdrive> g))
