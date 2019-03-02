@@ -1,5 +1,6 @@
 
-#include <ccd/auth_utils.h>
+#include <ccd/auth.h>
+#include <ccd/http/cpprest_transport.h>
 #include <ccd/gdrive/gdrive.h>
 
 #include <iostream>
@@ -14,31 +15,29 @@
 #define GDRIVE_SECRET_KEY ""
 #endif
 
-pplx::task<web::http::client::http_client_config> auth()
+boost::future<ccd::auth::oauth2::token> auth()
 {
-    using namespace ccd::auth_utils;
-    using namespace utility::conversions;
-    using namespace web::http::client;
+    using namespace ccd::auth::oauth2;
 
     std::string token_file = "token.json";
     std::string redirect_uri = "http://localhost:25000/";
 
-    auto token = ccd::auth_utils::load_token(token_file);
-    if (!token.refresh_token().empty())
+    auto oa2token = load_token(token_file);
+    if (!oa2token.refresh.empty())
     {
-        return gdrive::auth_refresh(GDRIVE_APP_ID, GDRIVE_SECRET_KEY, to_utf8string(token.refresh_token()));
+        return gdrive::refresh(GDRIVE_APP_ID, GDRIVE_SECRET_KEY, oa2token.refresh);
     }
 
-    if (!token.access_token().empty())
+    if (!oa2token.access.empty())
     {
-        return pplx::task_from_result(gdrive::auth_access_token(GDRIVE_APP_ID, GDRIVE_SECRET_KEY,
-                                                                to_utf8string(token.access_token())));
+        return boost::make_ready_future(oa2token);
     }
 
-    return gdrive::auth_auto(GDRIVE_APP_ID, GDRIVE_SECRET_KEY, redirect_uri).then([token_file](http_client_config c)
+    return gdrive::automatic(GDRIVE_APP_ID, GDRIVE_SECRET_KEY, redirect_uri).then([token_file](boost::future<token> ft)
     {
-        ccd::auth_utils::save_token(c.oauth2()->token(), token_file);
-        return c;
+        auto t = ft.get();
+        save_token(t, token_file);
+        return t;
     });
 }
 
@@ -91,16 +90,19 @@ void print_getting_started_content(ccd::gdrive::v3::resource::files::files& file
 
 int main()
 {
-    auto client = auth().then([](web::http::client::http_client_config c)
+    auth().then([](boost::future<ccd::auth::oauth2::token> t)
     {
-        return std::make_shared<web::http::client::http_client>("https://www.googleapis.com", c);
-    });
+        ccd::http::authorized_oauth2_transport_factory f { t.get().access, ccd::http::cpprest_transport_factory{} };
+        return ccd::gdrive::gdrive { std::move(f) };
+    })
+    .then([](boost::future<ccd::gdrive::gdrive> g)
+    {
+        auto files_rsc = g.get().files_resource();
 
-    ccd::gdrive::gdrive g { client };
-    auto files_rsc = g.files_resource();
-
-    list_root_dir(files_rsc);
-    print_getting_started_content(files_rsc);
+        list_root_dir(files_rsc);
+        print_getting_started_content(files_rsc);
+    })
+    .get();
 
     return 0;
 }

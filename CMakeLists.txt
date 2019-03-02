@@ -7,6 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(Boost REQUIRED COMPONENTS thread)
 find_package(cpprestsdk REQUIRED)
+find_package(RapidJSON REQUIRED)
 
 option(CCD_BUILD_EXAMPLES "build examples" OFF)
 option(CCD_BUILD_TESTS "build tests" OFF)
@@ -15,10 +16,16 @@ add_compile_options(-Wall -Werror)
 add_definitions(-D_TURN_OFF_PLATFORM_STRING) # disable cpprestsdk U() macro, which may conflict with other libs
 
 set(CCD_HDR
-        include/ccd/auth_utils.h
+        include/ccd/auth.h
         include/ccd/defs.h
-        include/ccd/executor.h
         include/ccd/utils.h
+        include/ccd/var.h
+
+        include/ccd/details/http_executor.h
+
+        include/ccd/http/authorized_oauth2_transport.h
+        include/ccd/http/http_transport.h
+        include/ccd/http/cpprest_transport.h # should be optional!
 
         include/ccd/gdrive/gdrive.h
         include/ccd/gdrive/details/gdrive_parameters.h
@@ -33,9 +40,14 @@ set(CCD_HDR
         include/ccd/gdrive/resource/gdrive_list.h
         include/ccd/gdrive/resource/gdrive_update.h)
 set(CCD_SRC
-        src/auth_utils.cpp
-        src/executor.cpp
+        src/auth.cpp
         src/utils.cpp
+
+        src/details/http_executor.cpp
+
+        src/http/authorized_oauth2_transport.cpp
+        src/http/http_transport.cpp
+        src/http/cpprest_transport.cpp # should be optional!
 
         src/gdrive/gdrive.cpp
         src/gdrive/model/gdrive_file.cpp

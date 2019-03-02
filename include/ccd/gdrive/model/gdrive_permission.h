@@ -5,8 +5,7 @@
 // This code is licensed under MIT license
 
 #include <ccd/defs.h>
-
-#include <cpprest/json.h>
+#include <ccd/utils.h>
 
 #include <optional>
 
@@ -25,9 +24,9 @@ public:
     public:
         teamdrive_permission_details();
 
-        explicit teamdrive_permission_details(web::json::value js);
+        explicit teamdrive_permission_details(ccd::var js);
 
-        web::json::value to_json() const;
+        ccd::var to_json() const;
 
         std::optional<std::string> get_teamdrive_permission_type() const;
 
@@ -46,16 +45,16 @@ public:
         teamdrive_permission_details& set_inherited(std::optional<bool> x);
 
     private:
-        web::json::value m_json;
+        ccd::var m_json;
     };
 
     using teamdrive_permission_details_list_t = std::vector<teamdrive_permission_details>;
 
     permission();
 
-    explicit permission(web::json::value js);
+    explicit permission(ccd::var js);
 
-    web::json::value to_json() const;
+    ccd::var to_json() const;
 
     std::optional<std::string> get_id() const;
 
@@ -102,7 +101,7 @@ public:
     permission& set_deleted(std::optional<bool> x);
 
 private:
-    web::json::value m_json;
+    ccd::var m_json;
     std::optional<teamdrive_permission_details_list_t> m_teamdrive_permission_details;
 };
 

@@ -4,7 +4,7 @@
 // (c) 2019 Iurii Pelykh
 // This code is licensed under MIT license
 
-#include <ccd/executor.h>
+#include <ccd/details/http_executor.h>
 #include <ccd/gdrive/details/gdrive_parameters.h>
 #include <ccd/gdrive/model/gdrive_file.h>
 
@@ -17,7 +17,7 @@ namespace resource::files
 
 class files;
 
-class list : public executor,
+class list : public ccd::details::http_executor,
              public details::with_file_parameters<list>
 {
     friend class files;
@@ -50,12 +50,12 @@ public:
     /// @brief Whether the requesting application supports Team Drives
     list& set_team_drive_id(std::optional<std::string> x);
 
-    pplx::task<model::file_list> exec();
+    boost::future<model::file_list> exec();
 
 private:
-    list(pplx::task<http_client_ptr> client);
+    list(ccd::http::transport_func transport);
 
-    web::http::http_request build_request() override;
+    ccd::http::request build_request() override;
 
     std::optional<std::string> m_corpora;
     std::optional<std::string> m_corpus;

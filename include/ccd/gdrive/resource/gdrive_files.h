@@ -48,9 +48,9 @@ public:
     update update_request(std::string file_id);
 
 private:
-    explicit files(pplx::task<http_client_ptr> client);
+    explicit files(ccd::http::transport_factory factory);
 
-    pplx::task<http_client_ptr> m_client;
+    ccd::http::transport_factory m_http_transport_factory;
 };
 
 }

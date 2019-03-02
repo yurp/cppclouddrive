@@ -8,8 +8,8 @@ inline namespace v3
 namespace resource::files
 {
 
-copy::copy(pplx::task<http_client_ptr> client, std::string file_id, model::file metadata_patch)
-    : executor(std::move(client))
+copy::copy(ccd::http::transport_func http_transport, std::string file_id, model::file metadata_patch)
+    : ccd::details::http_executor(std::move(http_transport))
     , m_file_id(std::move(file_id))
     , m_metadata_patch(std::move(metadata_patch))
 {
@@ -22,24 +22,23 @@ copy& copy::set_file_id(std::string x)
     return *this;
 }
 
-pplx::task<model::file> copy::exec()
+boost::future<model::file> copy::exec()
 {
     return exec_custom<model::file>();
 }
 
-web::http::http_request copy::build_request()
+ccd::http::request copy::build_request()
 {
-    auto ub = web::uri_builder{ }.set_path("drive/v3/files").append_path(m_file_id).append_path("copy");
-    add_change_file_parameters(ub);
-    add_ignore_default_visibility_parameter(ub);
+    ccd::http::request e;
+    e.method = "POST";
+    e.host = "https://www.googleapis.com";
+    e.path = "drive/v3/files/" + m_file_id + "/copy";
+    add_change_file_parameters(e);
+    add_ignore_default_visibility_parameter(e);
+    e.body = to_json(m_metadata_patch.to_json());
+    e.content_type = "application/json; charset=utf-8";
 
-    web::http::http_request r;
-    r.set_method(web::http::methods::POST);
-    r.set_body(utility::conversions::to_utf8string(m_metadata_patch.to_json().serialize()),
-               "application/json; charset=utf-8");
-    r.set_request_uri(ub.to_uri());
-
-    return r;
+    return e;
 }
 
 }
