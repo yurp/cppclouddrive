@@ -7,19 +7,19 @@
 
 // set your app id here or define outside
 #ifndef GDRIVE_APP_ID
-#define GDRIVE_APP_ID "591088338489-l3j9itq32r02pn46c12m1dnv2hasonhe.apps.googleusercontent.com"
+#define GDRIVE_APP_ID ""
 #endif
 
 // set your app's secret key here or define outside
 #ifndef GDRIVE_SECRET_KEY
-#define GDRIVE_SECRET_KEY "cJwtdu4RiZtkYa04kTXbdYua"
+#define GDRIVE_SECRET_KEY ""
 #endif
 
 boost::future<ccd::auth::oauth2::token> auth()
 {
     using namespace ccd::auth::oauth2;
 
-    std::string token_file = "/Users/iurii/proj/src/cldrv/tokens/gdrive.yurii.pelykh.json";
+    std::string token_file = "token.json";
     std::string redirect_uri = "http://localhost:25000/";
 
     auto oa2token = load_token(token_file);
