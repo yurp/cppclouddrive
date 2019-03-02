@@ -135,9 +135,6 @@ std::string to_json(const var& x)
     return v.sb.GetString();
 }
 
-namespace details
-{
-
 std::optional<string_list_t> create_string_list(ccd::var& js, const std::string& key)
 {
     if (js.is<ccd::var::map_t>() && js.has(key) && js[key].is<ccd::var::vector_t>())
@@ -202,5 +199,4 @@ void key_value_list_to_json(ccd::var& js, const std::string& key, const std::opt
 #endif
 }
 
-}
 }

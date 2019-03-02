@@ -19,6 +19,7 @@ set(CCD_HDR
         include/ccd/auth.h
         include/ccd/defs.h
         include/ccd/utils.h
+        include/ccd/var.h
 
         include/ccd/details/http_executor.h
 

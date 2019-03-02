@@ -27,48 +27,48 @@ ccd::var permission::teamdrive_permission_details::to_json() const
 
 std::optional <std::string> permission::teamdrive_permission_details::get_teamdrive_permission_type() const
 {
-    return details::get_value<std::string>(m_json, "teamDrivePermissionType");
+    return get_value<std::string>(m_json, "teamDrivePermissionType");
 }
 
 std::optional <std::string> permission::teamdrive_permission_details::get_role() const
 {
-    return details::get_value<std::string>(m_json, "role");
+    return get_value<std::string>(m_json, "role");
 }
 
 std::optional <std::string> permission::teamdrive_permission_details::get_inherited_from() const
 {
-    return details::get_value<std::string>(m_json, "inheritedFrom");
+    return get_value<std::string>(m_json, "inheritedFrom");
 }
 
 std::optional<bool> permission::teamdrive_permission_details::get_inherited() const
 {
-    return details::get_value<bool>(m_json, "inherited");
+    return get_value<bool>(m_json, "inherited");
 }
 
 permission::teamdrive_permission_details& permission::teamdrive_permission_details::set_teamdrive_permission_type(
     std::optional <std::string> x)
 {
-    details::set_value<std::string>(m_json, "teamDrivePermissionType", x);
+    set_value<std::string>(m_json, "teamDrivePermissionType", x);
     return *this;
 }
 
 permission::teamdrive_permission_details& permission::teamdrive_permission_details::set_role(
     std::optional <std::string> x)
 {
-    details::set_value<std::string>(m_json, "role", x);
+    set_value<std::string>(m_json, "role", x);
     return *this;
 }
 
 permission::teamdrive_permission_details& permission::teamdrive_permission_details::set_inherited_from(
     std::optional <std::string> x)
 {
-    details::set_value<std::string>(m_json, "inheritedFrom", x);
+    set_value<std::string>(m_json, "inheritedFrom", x);
     return *this;
 }
 
 permission::teamdrive_permission_details& permission::teamdrive_permission_details::set_inherited(std::optional<bool> x)
 {
-    details::set_value<bool>(m_json, "inherited", x);
+    set_value<bool>(m_json, "inherited", x);
     return *this;
 }
 
@@ -83,8 +83,8 @@ permission::permission()
 
 permission::permission(ccd::var js)
     : m_json(std::move(js))
-    , m_teamdrive_permission_details(
-        details::create_object_list<teamdrive_permission_details>(m_json, "teamDrivePermissionDetails"))
+    , m_teamdrive_permission_details(create_object_list<teamdrive_permission_details>(m_json,
+                                                                                      "teamDrivePermissionDetails"))
 {
 
 }
@@ -92,54 +92,54 @@ permission::permission(ccd::var js)
 ccd::var permission::to_json() const
 {
     auto js = m_json;
-    details::object_list_to_json(js, "teamDrivePermissionDetails", m_teamdrive_permission_details);
+    object_list_to_json(js, "teamDrivePermissionDetails", m_teamdrive_permission_details);
 
     return js;
 }
 
 std::optional <std::string> permission::get_id() const
 {
-    return details::get_value<std::string>(m_json, "id");
+    return get_value<std::string>(m_json, "id");
 }
 
 std::optional <std::string> permission::get_type() const
 {
-    return details::get_value<std::string>(m_json, "type");
+    return get_value<std::string>(m_json, "type");
 }
 
 std::optional <std::string> permission::get_email_address() const
 {
-    return details::get_value<std::string>(m_json, "emailAddress");
+    return get_value<std::string>(m_json, "emailAddress");
 }
 
 std::optional <std::string> permission::get_domain() const
 {
-    return details::get_value<std::string>(m_json, "domain");
+    return get_value<std::string>(m_json, "domain");
 }
 
 std::optional <std::string> permission::get_role() const
 {
-    return details::get_value<std::string>(m_json, "role");
+    return get_value<std::string>(m_json, "role");
 }
 
 std::optional<bool> permission::get_allow_file_discovery() const
 {
-    return details::get_value<bool>(m_json, "allowFileDiscovery");
+    return get_value<bool>(m_json, "allowFileDiscovery");
 }
 
 std::optional <std::string> permission::get_display_name() const
 {
-    return details::get_value<std::string>(m_json, "displayName");
+    return get_value<std::string>(m_json, "displayName");
 }
 
 std::optional <std::string> permission::get_photo_link() const
 {
-    return details::get_value<std::string>(m_json, "photoLink");
+    return get_value<std::string>(m_json, "photoLink");
 }
 
 std::optional <timestamp_t> permission::get_expiration_time() const
 {
-    return details::get_value<std::string>(m_json, "expirationTime");
+    return get_value<std::string>(m_json, "expirationTime");
 }
 
 std::optional <permission::teamdrive_permission_details_list_t> permission::get_teamdrive_permission_details() const
@@ -149,60 +149,60 @@ std::optional <permission::teamdrive_permission_details_list_t> permission::get_
 
 std::optional<bool> permission::get_deleted() const
 {
-    return details::get_value<bool>(m_json, "deleted");
+    return get_value<bool>(m_json, "deleted");
 }
 
 permission& permission::set_id(std::optional <std::string> x)
 {
-    details::set_value<std::string>(m_json, "id", x);
+    set_value<std::string>(m_json, "id", x);
     return *this;
 }
 
 permission& permission::set_type(std::optional <std::string> x)
 {
-    details::set_value<std::string>(m_json, "type", x);
+    set_value<std::string>(m_json, "type", x);
     return *this;
 }
 
 permission& permission::set_email_address(std::optional <std::string> x)
 {
-    details::set_value<std::string>(m_json, "emailAddress", x);
+    set_value<std::string>(m_json, "emailAddress", x);
     return *this;
 }
 
 permission& permission::set_domain(std::optional <std::string> x)
 {
-    details::set_value<std::string>(m_json, "domain", x);
+    set_value<std::string>(m_json, "domain", x);
     return *this;
 }
 
 permission& permission::set_role(std::optional <std::string> x)
 {
-    details::set_value<std::string>(m_json, "role", x);
+    set_value<std::string>(m_json, "role", x);
     return *this;
 }
 
 permission& permission::set_allow_file_discovery(std::optional<bool> x)
 {
-    details::set_value<bool>(m_json, "allowFileDiscovery", x);
+    set_value<bool>(m_json, "allowFileDiscovery", x);
     return *this;
 }
 
 permission& permission::set_display_name(std::optional <std::string> x)
 {
-    details::set_value<std::string>(m_json, "displayName", x);
+    set_value<std::string>(m_json, "displayName", x);
     return *this;
 }
 
 permission& permission::set_photo_link(std::optional <std::string> x)
 {
-    details::set_value<std::string>(m_json, "photoLink", x);
+    set_value<std::string>(m_json, "photoLink", x);
     return *this;
 }
 
 permission& permission::set_expiration_time(std::optional <std::string> x)
 {
-    details::set_value<std::string>(m_json, "expirationTime", x);
+    set_value<std::string>(m_json, "expirationTime", x);
     return *this;
 }
 
@@ -215,7 +215,7 @@ permission& permission::set_teamdrive_permission_details(
 
 permission& permission::set_deleted(std::optional<bool> x)
 {
-    details::set_value<bool>(m_json, "deleted", x);
+    set_value<bool>(m_json, "deleted", x);
     return *this;
 }
 
