@@ -8,8 +8,8 @@ inline namespace v3
 namespace resource::files
 {
 
-get::get(boost::shared_future<std::string> token, std::string file_id)
-    : m_token(std::move(token))
+get::get(ccd::http::transport_func http_transport, std::string file_id)
+    : ccd::details::http_executor(std::move(http_transport))
     , m_file_id(std::move(file_id))
 {
 
@@ -48,26 +48,21 @@ boost::future<model::file> get::exec()
     return exec_custom<model::file>();
 }
 
-boost::future<executor::executor_ptr> get::build_request()
+ccd::http::request get::build_request()
 {
-    std::shared_ptr<http_executor> e = std::make_shared<cpprest_executor>();
-    e->set_method("GET");
-    e->set_endpoint("https://www.googleapis.com");
-    e->append_path("/drive/v3/files");
-    e->append_path(m_file_id);
-    add_file_parameters(*e);
+    ccd::http::request e;
+    e.method = "GET";
+    e.host = "https://www.googleapis.com";
+    e.path = "/drive/v3/files/" + m_file_id;
+    add_file_parameters(e);
 
     if (m_acknowledge_abuse)
-        e->append_query("acknowledgeAbuse", *m_acknowledge_abuse ? "true" : "false");
+        e.queries.emplace_back("acknowledgeAbuse", *m_acknowledge_abuse ? "true" : "false");
 
     if (m_range)
-        e->add_header("Range", "bytes=" + std::to_string(m_range->first) + "-" + std::to_string(m_range->second));
-
-    return m_token.then([e = std::move(e)](boost::shared_future<std::string> t)
-    {
-        e->set_oauth2_token(t.get());
-        return e;
-    });
+        e.headers.emplace_back("Range",
+                               "bytes=" + std::to_string(m_range->first) + "-" + std::to_string(m_range->second));
+    return e;
 }
 
 }

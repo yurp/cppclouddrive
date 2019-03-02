@@ -4,7 +4,7 @@
 // (c) 2019 Iurii Pelykh
 // This code is licensed under MIT license
 
-#include <ccd/executor.h>
+#include <ccd/details/http_executor.h>
 #include <ccd/gdrive/details/gdrive_parameters.h>
 #include <ccd/gdrive/model/gdrive_file.h>
 
@@ -17,7 +17,7 @@ namespace resource::files
 
 class files;
 
-class list : public executor,
+class list : public ccd::details::http_executor,
              public details::with_file_parameters<list>
 {
     friend class files;
@@ -53,11 +53,10 @@ public:
     boost::future<model::file_list> exec();
 
 private:
-    list(boost::shared_future<std::string> token);
+    list(ccd::http::transport_func transport);
 
-    boost::future<executor::executor_ptr> build_request() override;
+    ccd::http::request build_request() override;
 
-    boost::shared_future<std::string> m_token;
     std::optional<std::string> m_corpora;
     std::optional<std::string> m_corpus;
     std::optional<bool> m_include_team_drive_items;

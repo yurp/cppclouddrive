@@ -1,6 +1,6 @@
 # C++ Cloud Drive (CCD)
 
-Async C++17 API for cloud drives. Supports Google Drive. Implemented using [cpprestsdk](https://github.com/Microsoft/cpprestsdk)
+Async C++17 API for cloud drives. Supports Google Drive
 
 ## Google Drive
 
@@ -12,30 +12,34 @@ More info about filters, fields etc can be found in [official documentation](htt
 
 Usage example (list Google Drive root directory):
 ```c++
-    auto http_client = gdrive::auth_auto(GDRIVE_APP_ID, GDRIVE_SECRET_KEY, "http://localhost:25000/")
-        .then([token_file](http_client_config c)
+    ccd::auth::oauth2::automatic(GDRIVE_APP_ID, GDRIVE_SECRET_KEY, "http://localhost:25000/")
+        .then([](boost::future<ccd::auth::oauth2::token> t)
         {
-            return std::make_shared<web::http::client::http_client>("https://www.googleapis.com", c);
-        }
-    auto http_client = ccd::create_gdrive_http_client(GDRIVE_APP_ID, GDRIVE_SECRET_KEY, token_file);
-    ccd::gdrive::gdrive g { http_client };
-    auto files_rsc = g.files_resource();
-    
-    auto file_list = files_rsc.list_request().set_page_size(999)
-                                             .set_fields("files(id,name,mimeType,size,createdTime)")
-                                             .set_q("'root' in parents")
-                                             .exec().get();
-
-    if (auto files = file_list.get_files())
-    {
-        std::cout << "gdrive root directory:\n";
-        for (const auto& file: *files)
+           ccd::http::authorized_oauth2_transport_factory f { t.get().access, ccd::http::cpprest_transport_factory{} };
+           return ccd::gdrive::gdrive { std::move(f) };
+        })
+        .then([](boost::future<ccd::gdrive::gdrive> g))
         {
-            std::cout << "id = " << file.get_id().value_or("?")
-                      << ", name = " << file.get_name().value_or("?")
-                      << ", mime type = " << file.get_mime_type().value_or("?")
-                      << ", size = " << file.get_size().value_or(-1)
-                      << ", created = " << file.get_created_time().value_or("?") << "\n";
-        }
-    }
+            auto files_rsc = g.get().files_resource();
+            return files_rsc.list_request().set_page_size(999)
+                                           .set_fields("files(id,name,mimeType,size,createdTime)")
+                                           .set_q("'root' in parents")
+                                           .exec();
+        })
+        .unwrap().then([](boost::future<ccd::gdrive::model::file_list> lst)
+        {
+            if (auto files = lst.get().get_files())
+            {
+                std::cout << "gdrive root directory:\n";
+                for (const auto& file: *files)
+                {
+                    std::cout << "id = " << file.get_id().value_or("?")
+                              << ", name = " << file.get_name().value_or("?")
+                              << ", mime type = " << file.get_mime_type().value_or("?")
+                              << ", size = " << file.get_size().value_or(-1)
+                              << ", created = " << file.get_created_time().value_or("?") << "\n";
+                }
+            }
+        })
+        .get();
 ```

@@ -8,8 +8,8 @@ inline namespace v3
 namespace resource::files
 {
 
-copy::copy(boost::shared_future<std::string> token, std::string file_id, model::file metadata_patch)
-    : m_token(std::move(token))
+copy::copy(ccd::http::transport_func http_transport, std::string file_id, model::file metadata_patch)
+    : ccd::details::http_executor(std::move(http_transport))
     , m_file_id(std::move(file_id))
     , m_metadata_patch(std::move(metadata_patch))
 {
@@ -27,23 +27,18 @@ boost::future<model::file> copy::exec()
     return exec_custom<model::file>();
 }
 
-boost::future<executor::executor_ptr> copy::build_request()
+ccd::http::request copy::build_request()
 {
-    std::shared_ptr<http_executor> e = std::make_shared<cpprest_executor>();
-    e->set_method("POST");
-    e->set_endpoint("https://www.googleapis.com");
-    e->append_path("drive/v3/files");
-    e->append_path(m_file_id);
-    e->append_path("copy");
-    add_change_file_parameters(*e);
-    add_ignore_default_visibility_parameter(*e);
-    e->set_body("application/json; charset=utf-8", to_json(m_metadata_patch.to_json()));
+    ccd::http::request e;
+    e.method = "POST";
+    e.host = "https://www.googleapis.com";
+    e.path = "drive/v3/files/" + m_file_id + "/copy";
+    add_change_file_parameters(e);
+    add_ignore_default_visibility_parameter(e);
+    e.body = to_json(m_metadata_patch.to_json());
+    e.content_type = "application/json; charset=utf-8";
 
-    return m_token.then([e = std::move(e)](boost::shared_future<std::string> t)
-    {
-        e->set_oauth2_token(t.get());
-        return e;
-    });
+    return e;
 }
 
 }

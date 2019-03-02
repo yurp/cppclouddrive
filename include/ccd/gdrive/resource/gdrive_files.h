@@ -48,9 +48,9 @@ public:
     update update_request(std::string file_id);
 
 private:
-    explicit files(boost::shared_future<std::string> token);
+    explicit files(ccd::http::transport_factory factory);
 
-    boost::shared_future<std::string> m_token;
+    ccd::http::transport_factory m_http_transport_factory;
 };
 
 }

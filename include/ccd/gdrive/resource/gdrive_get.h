@@ -4,7 +4,7 @@
 // (c) 2019 Iurii Pelykh
 // This code is licensed under MIT license
 
-#include <ccd/executor.h>
+#include <ccd/details/http_executor.h>
 #include <ccd/gdrive/details/gdrive_parameters.h>
 #include <ccd/gdrive/model/gdrive_file.h>
 
@@ -17,7 +17,7 @@ namespace resource::files
 
 class files;
 
-class get : public executor,
+class get : public ccd::details::http_executor,
             public details::with_file_parameters<get>
 {
     friend class files;
@@ -36,11 +36,10 @@ public:
     boost::future<model::file> exec();
 
 private:
-    get(boost::shared_future<std::string> token, std::string file_id);
+    get(ccd::http::transport_func hexec, std::string file_id);
 
-    boost::future<executor::executor_ptr> build_request() override;
+    ccd::http::request build_request() override;
 
-    boost::shared_future<std::string> m_token;
     std::string m_file_id;
     std::optional<bool> m_acknowledge_abuse;
     std::optional<std::pair<int64_t, int64_t>> m_range;

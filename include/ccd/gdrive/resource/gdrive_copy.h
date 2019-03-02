@@ -4,7 +4,7 @@
 // (c) 2019 Iurii Pelykh
 // This code is licensed under MIT license
 
-#include <ccd/executor.h>
+#include <ccd/details/http_executor.h>
 #include <ccd/gdrive/details/gdrive_parameters.h>
 #include <ccd/gdrive/model/gdrive_file.h>
 
@@ -17,7 +17,7 @@ namespace resource::files
 
 class files;
 
-class copy : public executor,
+class copy : public ccd::details::http_executor,
              public details::with_change_file_parameters<copy>,
              public details::with_ignore_default_visibility_parameter<copy>
 {
@@ -30,9 +30,9 @@ public:
     boost::future<model::file> exec();
 
 private:
-    copy(boost::shared_future<std::string> token, std::string file_id, model::file metadata_patch);
+    copy(ccd::http::transport_func http_transport, std::string file_id, model::file metadata_patch);
 
-    boost::future<executor::executor_ptr> build_request() override;
+    ccd::http::request build_request() override;
 
     boost::shared_future<std::string> m_token;
     std::string m_file_id;

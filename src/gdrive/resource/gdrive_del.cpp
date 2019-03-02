@@ -8,8 +8,8 @@ inline namespace v3
 namespace resource::files
 {
 
-del::del(boost::shared_future<std::string> token, std::string file_id)
-    : m_token(std::move(token))
+del::del(ccd::http::transport_func http_transport, std::string file_id)
+    : ccd::details::http_executor(std::move(http_transport))
     , m_file_id(std::move(file_id))
 {
 
@@ -29,20 +29,15 @@ boost::future<void> del::exec()
     });
 }
 
-boost::future<executor::executor_ptr> del::build_request()
+ccd::http::request del::build_request()
 {
-    std::shared_ptr<http_executor> e = std::make_shared<cpprest_executor>();
-    e->set_method("DELETE");
-    e->set_endpoint("https://www.googleapis.com");
-    e->append_path("/drive/v3/files");
-    e->append_path(m_file_id);
-    add_file_parameters(*e);
+    ccd::http::request e;
+    e.method = "DELETE";
+    e.host = "https://www.googleapis.com";
+    e.path = "/drive/v3/files/" + m_file_id;
+    add_file_parameters(e);
 
-    return m_token.then([e = std::move(e)](boost::shared_future<std::string> t)
-    {
-        e->set_oauth2_token(t.get());
-        return e;
-    });
+    return e;
 }
 
 }

@@ -4,11 +4,6 @@
 // (c) 2019 Iurii Pelykh
 // This code is licensed under MIT license
 
-#pragma once
-
-// (c) 2019 Iurii Pelykh
-// This code is licensed under MIT license
-
 #include <ccd/defs.h>
 
 #include <optional>
@@ -107,18 +102,14 @@ std::optional<T> get_value(const ccd::var& js, const std::string& key)
 template <typename T>
 void set_value(ccd::var& js, const std::string& key, std::optional<T> value)
 {
-    if (!js.is<ccd::var::map_t>())
+    if (js.is<ccd::var::map_t>())
     {
-        return;
-    }
-
-    if (value)
-    {
+        if (!value)
+        {
+            js.as<ccd::var::map_t>().erase(key);
+            return;
+        }
         js[key] = *value;
-    }
-    else
-    {
-        js.as<ccd::var::map_t>().erase(key);
     }
 }
 

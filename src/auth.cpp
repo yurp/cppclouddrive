@@ -1,16 +1,18 @@
 
-#include <ccd/auth_utils.h>
+#include <ccd/auth.h>
 
 #include <ccd/utils.h>
 
 #include <cpprest/asyncrt_utils.h>
+#include <cpprest/http_client.h>
 #include <cpprest/http_listener.h>
 #include <cpprest/interopstream.h>
+#include <cpprest/oauth2.h>
 
 #include <fstream>
 #include <mutex>
 
-namespace ccd::auth_utils
+namespace ccd::auth::oauth2
 {
 
 namespace
@@ -122,7 +124,7 @@ token load_token(const std::string& fname)
     return t;
 }
 
-boost::future<token> auth_auto(std::string app_id, std::string app_secret, std::string auth_uri, std::string token_uri,
+boost::future<token> automatic(std::string app_id, std::string app_secret, std::string auth_uri, std::string token_uri,
                                std::string redirect_uri, std::string scope)
 {
     using namespace web::http;
@@ -153,43 +155,27 @@ boost::future<token> auth_auto(std::string app_id, std::string app_secret, std::
         open_browser(oauth2_conf->build_authorization_uri(true));
         return redirected_uri_task;
     })
-    .then([oauth2_conf](web::uri redirected_uri)
+    .then([oauth2_conf](web::uri redirected_uri) { return oauth2_conf->token_from_redirected_uri(redirected_uri); })
+    .then([listener]                             { return listener->close(); })
+    .then([listener]                             { return 0; })
+    .then([oauth2_conf, p = std::move(p)](pplx::task<int> i) mutable
     {
-        return oauth2_conf->token_from_redirected_uri(redirected_uri);
-    })
-    .then([listener]
-    {
-        return listener->close();
-    })
-    .then([listener, oauth2_conf, p = std::move(p)]() mutable
-    {
-        p.set_value(to_token(*oauth2_conf));
+        try
+        {
+            i.get(); // if exception occured it will throw here
+            p.set_value(to_token(*oauth2_conf));
+        }
+        catch (...)
+        {
+            p.set_exception(std::current_exception()); // TODO: looks like set_exception() can throw
+        }
     });
 
     return f;
 }
 
-boost::future<token> auth_refresh(std::string app_id, std::string app_secret, std::string auth_uri,
-                                  std::string token_uri, std::string refresh_token)
-{
-    auto oauth2_conf = make_oauth2(std::move(app_id), std::move(app_secret), std::move(auth_uri), std::move(token_uri));
-    web::http::oauth2::experimental::oauth2_token t;
-    t.set_refresh_token(utility::conversions::to_string_t(refresh_token));
-    oauth2_conf->set_token(std::move(t));
-
-    boost::promise<token> p;
-    auto f = p.get_future();
-
-    oauth2_conf->token_from_refresh().then([oauth2_conf, p = std::move(p)]() mutable
-    {
-        p.set_value(to_token(*oauth2_conf));
-    });
-
-    return f;
-}
-
-boost::future<token> auth_manual(std::string app_id, std::string app_secret, std::string auth_uri,
-                                 std::string token_uri, std::string redirect_uri, std::string scope)
+boost::future<token> manual(std::string app_id, std::string app_secret, std::string auth_uri, std::string token_uri,
+                            std::string redirect_uri, std::string scope)
 {
     using namespace utility::conversions;
 
@@ -207,9 +193,52 @@ boost::future<token> auth_manual(std::string app_id, std::string app_secret, std
     {
         return oauth2_conf->token_from_code(code_buf->collection());
     })
-    .then([oauth2_conf, p = std::move(p)]() mutable
+    .then([]
     {
-        p.set_value(to_token(*oauth2_conf));
+        return 0;
+    })
+    .then([oauth2_conf, p = std::move(p)](pplx::task<int> i) mutable
+    {
+        try
+        {
+            i.get(); // if exception occured it will throw here
+            p.set_value(to_token(*oauth2_conf));
+        }
+        catch (...)
+        {
+            p.set_exception(std::current_exception()); // TODO: looks like set_exception() can throw
+        }
+    });
+
+    return f;
+}
+
+boost::future<token> refresh(std::string app_id, std::string app_secret, std::string auth_uri, std::string token_uri,
+                             std::string refresh_token)
+{
+    auto oauth2_conf = make_oauth2(std::move(app_id), std::move(app_secret), std::move(auth_uri), std::move(token_uri));
+    web::http::oauth2::experimental::oauth2_token t;
+    t.set_refresh_token(utility::conversions::to_string_t(refresh_token));
+    oauth2_conf->set_token(std::move(t));
+
+    boost::promise<token> p;
+    auto f = p.get_future();
+
+    oauth2_conf->token_from_refresh().then([]
+    {
+        return 0;
+    })
+    .then([oauth2_conf, p = std::move(p)](pplx::task<int> i) mutable
+    {
+        try
+        {
+            i.get(); // if exception occured it will throw here
+            p.set_value(to_token(*oauth2_conf));
+        }
+        catch (...)
+        {
+            p.set_exception(std::current_exception()); // TODO: looks like set_exception() can throw
+        }
     });
 
     return f;
@@ -218,22 +247,22 @@ boost::future<token> auth_manual(std::string app_id, std::string app_secret, std
 namespace gdrive
 {
 
-boost::future<token> auth_auto(std::string app_id, std::string app_secret, std::string redirect_uri)
+boost::future<token> automatic(std::string app_id, std::string app_secret, std::string redirect_uri)
 {
-    return ccd::auth_utils::auth_auto(std::move(app_id), std::move(app_secret), gdrive_auth_uri, gdrive_token_uri,
-                                      std::move(redirect_uri), gdrive_scope);
+    return ccd::auth::oauth2::automatic(std::move(app_id), std::move(app_secret), gdrive_auth_uri, gdrive_token_uri,
+                                        std::move(redirect_uri), gdrive_scope);
 }
 
-boost::future<token> auth_refresh(std::string app_id, std::string app_secret, std::string refresh_token)
+boost::future<token> manual(std::string app_id, std::string app_secret)
 {
-    return ccd::auth_utils::auth_refresh(std::move(app_id), std::move(app_secret), gdrive_auth_uri, gdrive_token_uri,
-                                         std::move(refresh_token));
+    return ccd::auth::oauth2::manual(std::move(app_id), std::move(app_secret), gdrive_auth_uri, gdrive_token_uri,
+                                     gdrive_no_redirect_uri, gdrive_scope);
 }
 
-boost::future<token> auth_manual(std::string app_id, std::string app_secret)
+boost::future<token> refresh(std::string app_id, std::string app_secret, std::string refresh_token)
 {
-    return ccd::auth_utils::auth_manual(std::move(app_id), std::move(app_secret), gdrive_auth_uri, gdrive_token_uri,
-                                        gdrive_no_redirect_uri, gdrive_scope);
+    return ccd::auth::oauth2::refresh(std::move(app_id), std::move(app_secret), gdrive_auth_uri, gdrive_token_uri,
+                                      std::move(refresh_token));
 }
 
 }
