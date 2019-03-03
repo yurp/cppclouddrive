@@ -168,7 +168,8 @@ boost::future<token> automatic(std::string app_id, std::string app_secret, std::
         }
         catch (...)
         {
-            p.set_exception(std::current_exception()); // TODO: looks like set_exception() can throw
+            p.set_exception(boost::current_exception());
+            //p.set_exception(std::current_exception()); // TODO: looks like set_exception() can throw
         }
     });
 
@@ -207,7 +208,8 @@ boost::future<token> manual(std::string app_id, std::string app_secret, std::str
         }
         catch (...)
         {
-            p.set_exception(std::current_exception()); // TODO: looks like set_exception() can throw
+            p.set_exception(boost::current_exception());
+            //p.set_exception(std::current_exception()); // TODO: looks like set_exception() can throw
         }
     });
 
@@ -238,7 +240,8 @@ boost::future<token> refresh(std::string app_id, std::string app_secret, std::st
         }
         catch (...)
         {
-            p.set_exception(std::current_exception()); // TODO: looks like set_exception() can throw
+            p.set_exception(boost::current_exception());
+            //p.set_exception(std::current_exception()); // TODO: looks like set_exception() can throw
         }
     });
 
@@ -277,7 +280,7 @@ boost::future<token> automatic(std::string app_id, std::string app_secret, std::
                                         std::move(redirect_uri), "");
 }
 
-boost::future<token> auth_manual(std::string app_id, std::string app_secret)
+boost::future<token> manual(std::string app_id, std::string app_secret)
 {
     using namespace utility::conversions;
 
@@ -317,10 +320,7 @@ boost::future<token> auth_manual(std::string app_id, std::string app_secret)
     return f;
 }
 
-pplx::task<web::http::client::http_client_config> auth_refresh(std::string app_id,
-                                                               std::string app_secret,
-                                                               std::string refresh_token,
-                                                               web::http::client::http_client_config conf)
+boost::future<token> refresh(std::string app_id, std::string app_secret, std::string refresh_token)
 {
     return ccd::auth::oauth2::refresh(std::move(app_id), std::move(app_secret), dropbox_auth_uri, dropbox_token_uri,
                                       std::move(refresh_token));

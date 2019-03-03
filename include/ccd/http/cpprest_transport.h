@@ -9,10 +9,6 @@
 namespace ccd::http
 {
 
-class cpprest_transport_factory
-{
-public:
-    transport_func operator()();
-};
+transport_func cpprest_transport_factory();
 
 }

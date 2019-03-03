@@ -8,32 +8,32 @@ inline namespace v2
 namespace resource::files
 {
 
-using namespace utility::conversions;
-
 namespace
 {
 
-const auto path_field = to_string_t("path");
+const auto path_field = "path";
 
 }
 
-download::download(pplx::task<http_client_ptr> client, std::string path)
-    : executor(std::move(client))
-    , m_json(web::json::value::object())
+download::download(ccd::http::transport_func http_transport, std::string path)
+    : ccd::details::http_executor(std::move(http_transport))
+    , m_json(var::map_t{})
 {
-    m_json[path_field] = web::json::value{ to_string_t(std::move(path)) };
+    m_json[path_field] = std::move(path);
 }
 
-web::http::http_request download::build_request()
+ccd::http::request download::build_request()
 {
-    web::http::http_request r { web::http::methods::POST };
-    r.headers().add("Dropbox-API-Arg", m_json);
+    ccd::http::request e;
+    e.method = "POST";
+    e.host = "https://content.dropboxapi.com";
+    e.path = "2/files/download";
+
+    e.headers.emplace_back("Dropbox-API-Arg", to_json(m_json));
     if (m_range)
-        r.headers().add("Range", "bytes=" + std::to_string(m_range->first) + "-" + std::to_string(m_range->second));
+        e.headers.emplace_back("Range", "bytes=" + std::to_string(m_range->first) + "-" + std::to_string(m_range->second));
 
-    r.set_request_uri(utility::conversions::to_string_t("/2/files/download"));
-
-    return r;
+    return e;
 }
 
 download& download::reset_range()
@@ -48,7 +48,7 @@ download& download::set_range(int64_t offset, int64_t sz)
     return *this;
 }
 
-pplx::task<std::string> download::exec()
+boost::future<std::string> download::exec()
 {
     return exec_raw_string();
 }

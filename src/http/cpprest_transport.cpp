@@ -62,7 +62,8 @@ response_future cpprest_transport(request r)
         }
         catch (...)
         {
-            p.set_exception(std::current_exception()); // TODO: looks like set_exception() can throw
+            p.set_exception(boost::current_exception()); // TODO: looks like set_exception() can throw
+            //p.set_exception(std::current_exception()); // TODO: looks like set_exception() can throw
         }
     });
 
@@ -71,7 +72,7 @@ response_future cpprest_transport(request r)
 
 }
 
-transport_func cpprest_transport_factory::operator()()
+transport_func cpprest_transport_factory()
 {
     return cpprest_transport;
 }

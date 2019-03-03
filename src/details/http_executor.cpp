@@ -1,6 +1,8 @@
 
 #include <ccd/details/http_executor.h>
 
+#include <iostream>
+
 namespace ccd::details
 {
 
@@ -11,7 +13,7 @@ boost::future<std::string> http_executor::exec_raw_string()
         auto r = rf.get();
         if (r.code < 200 || r.code >= 300)
         {
-            throw ccd::http::exception { r.code, r.body };
+            boost::throw_exception(ccd::http::exception { r.code, r.body });
         }
 
         return r.body;

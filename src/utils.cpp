@@ -127,7 +127,8 @@ std::string to_json(const var& x)
         }
 
         StringBuffer sb;
-        PrettyWriter<StringBuffer> w { sb };
+        //PrettyWriter<StringBuffer> w { sb };
+        Writer<StringBuffer> w { sb };
     } v;
 
     std::visit(v, x.x);

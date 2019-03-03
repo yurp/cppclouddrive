@@ -27,9 +27,9 @@ public:
     list_folder_continue list_folder_continue_request(std::string cursor);
 
 private:
-    files(pplx::task<web::http::client::http_client_config> client_config);
+    files(ccd::http::transport_factory factory);
 
-    pplx::task<web::http::client::http_client_config> m_client_config;
+    ccd::http::transport_factory m_http_transport_factory;
 };
 
 }

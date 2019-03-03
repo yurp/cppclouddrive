@@ -100,7 +100,7 @@ std::optional<std::vector<T>> create_object_list(ccd::var& js, const std::string
 template<typename T>
 std::optional<std::vector<T>> create_object_list_copy(const ccd::var& js, const std::string& key)
 {
-    if (js.is<var::map_t>() && js.has(key) && js.as<var::map_t>().at(key).is<var::map_t>())
+    if (js.is<var::map_t>() && js.has(key) && js.as<var::map_t>().at(key).is<var::vector_t>())
     {
         std::optional<std::vector<T>> lst = std::vector<T>{ };
         for (auto& i: js.as<var::map_t>().at(key).as<ccd::var::vector_t>())

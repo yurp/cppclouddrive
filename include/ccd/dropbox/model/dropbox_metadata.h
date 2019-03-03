@@ -5,8 +5,7 @@
 // This code is licensed under MIT license
 
 #include <ccd/defs.h>
-
-#include <cpprest/json.h>
+#include <ccd/var.h>
 
 #include <optional>
 
@@ -23,9 +22,9 @@ class dimensions
 public:
     dimensions();
 
-    explicit dimensions(web::json::value js);
+    explicit dimensions(var js);
 
-    web::json::value to_json() const;
+    var to_json() const;
 
     /// @brief Height of the photo/video.
     dimensions& set_height(std::optional<int64_t> x);
@@ -40,7 +39,7 @@ public:
     std::optional<int64_t> get_width() const;
 
 private:
-    web::json::value m_json;
+    var m_json;
 };
 
 class gps_coordinates
@@ -48,9 +47,9 @@ class gps_coordinates
 public:
     gps_coordinates();
 
-    explicit gps_coordinates(web::json::value js);
+    explicit gps_coordinates(var js);
 
-    web::json::value to_json() const;
+    var to_json() const;
 
     /// @brief Latitude of the GPS coordinates.
     gps_coordinates& set_latitude(std::optional<double> x);
@@ -65,7 +64,7 @@ public:
     std::optional<double> get_longitude() const;
 
 private:
-    web::json::value m_json;
+    var m_json;
 };
 
 /// @brief The value will be one of the following datatypes: pending (void), photo, video
@@ -74,9 +73,9 @@ class media_info
 public:
     media_info();
 
-    explicit media_info(web::json::value js);
+    explicit media_info(var js);
 
-    web::json::value to_json() const;
+    var to_json() const;
 
     enum class tag_type { pending, photo, video, unknown };
 
@@ -109,7 +108,7 @@ public:
     std::optional<int64_t> get_duration() const;
 
 private:
-    web::json::value m_json;
+    var m_json;
 };
 
 /// @brief Sharing info for a file which is contained by a shared folder.
@@ -118,9 +117,9 @@ class sharing_info
 public:
     sharing_info();
 
-    explicit sharing_info(web::json::value js);
+    explicit sharing_info(var js);
 
-    web::json::value to_json() const;
+    var to_json() const;
 
     // file/folder
     /// @brief True if the file or folder is inside a read-only shared folder.
@@ -179,7 +178,7 @@ public:
     std::optional<bool> get_no_access() const;
 
 private:
-    web::json::value m_json;
+    var m_json;
 };
 
 /// @brief Raw key/value data to be associated with a Dropbox file. Property fields are added to Dropbox files as a
@@ -190,9 +189,9 @@ class property_field
 public:
     property_field();
 
-    explicit property_field(web::json::value js);
+    explicit property_field(var js);
 
-    web::json::value to_json() const;
+    var to_json() const;
 
     /// @brief Key of the property field associated with a file and template. Keys can be up to 256 bytes.
     property_field& set_name(std::optional<std::string> x);
@@ -207,7 +206,7 @@ public:
     std::optional<std::string> get_value() const;
 
 private:
-    web::json::value m_json;
+    var m_json;
 };
 
 using property_field_list_t = std::vector<property_field>;
@@ -221,9 +220,9 @@ class property_group
 public:
     property_group();
 
-    explicit property_group(web::json::value js);
+    explicit property_group(var js);
 
-    web::json::value to_json() const;
+    var to_json() const;
 
     /// @brief (min_length=1, pattern="(/|ptid:).*") A unique identifier for the associated template.
     property_group& set_template_id(std::optional<std::string> x);
@@ -238,7 +237,7 @@ public:
     std::optional<property_field_list_t> get_fields() const;
 
 private:
-    web::json::value m_json;
+    var m_json;
 };
 
 using property_group_list_t = std::vector<property_group>;
@@ -249,9 +248,9 @@ class metadata
 public:
     metadata();
 
-    explicit metadata(web::json::value js);
+    explicit metadata(var js);
 
-    web::json::value to_json() const;
+    var to_json() const;
 
     enum class tag_type { file, folder, deleted, unknown };
 
@@ -418,7 +417,7 @@ public:
     std::optional<std::string> get_shared_folder_id() const;
 
 private:
-    web::json::value m_json;
+    var m_json;
 };
 
 using metadata_list_t = std::vector<metadata>;
@@ -428,9 +427,9 @@ class metadata_list
 public:
     metadata_list();
 
-    explicit metadata_list(web::json::value js);
+    explicit metadata_list(var js);
 
-    web::json::value to_json() const;
+    var to_json() const;
 
     /// @brief The files and (direct) subfolders in the folder.
     metadata_list& set_entries(std::optional<metadata_list_t> x);
@@ -453,7 +452,7 @@ public:
     std::optional<bool> get_has_more() const;
 
 private:
-    web::json::value m_json;
+    var m_json;
 };
 
 }
