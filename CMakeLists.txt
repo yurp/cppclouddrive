@@ -7,6 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(Boost REQUIRED COMPONENTS thread)
 find_package(cpprestsdk REQUIRED)
+find_package(CURL REQUIRED)
 find_package(RapidJSON REQUIRED)
 
 option(CCD_BUILD_EXAMPLES "build examples" OFF)
@@ -24,6 +25,7 @@ set(CCD_HDR
         include/ccd/details/http_executor.h
 
         include/ccd/http/authorized_oauth2_transport.h
+        include/ccd/http/curl_transport.h # should be optional!
         include/ccd/http/http_transport.h
         include/ccd/http/cpprest_transport.h # should be optional!
 
@@ -52,6 +54,7 @@ set(CCD_SRC
         src/details/http_executor.cpp
 
         src/http/authorized_oauth2_transport.cpp
+        src/http/curl_transport.cpp # should be optional!
         src/http/http_transport.cpp
         src/http/cpprest_transport.cpp # should be optional!
 
@@ -77,7 +80,8 @@ add_library(ccd ${CCD_HDR} ${CCD_SRC})
 target_link_libraries(ccd
         PUBLIC
         Boost::thread
-        cpprestsdk::cpprest)
+        cpprestsdk::cpprest
+        curl)
 target_include_directories(ccd
         PUBLIC
         include)
