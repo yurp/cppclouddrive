@@ -1,25 +1,26 @@
 
 #include <ccd/auth.h>
 #include <ccd/http/cpprest_transport.h>
+#include <ccd/http/curl_transport.h>
 #include <ccd/gdrive/gdrive.h>
 
 #include <iostream>
 
 // set your app id here or define outside
 #ifndef GDRIVE_APP_ID
-#define GDRIVE_APP_ID ""
+#define GDRIVE_APP_ID "591088338489-l3j9itq32r02pn46c12m1dnv2hasonhe.apps.googleusercontent.com"
 #endif
 
 // set your app's secret key here or define outside
 #ifndef GDRIVE_SECRET_KEY
-#define GDRIVE_SECRET_KEY ""
+#define GDRIVE_SECRET_KEY "cJwtdu4RiZtkYa04kTXbdYua"
 #endif
 
 boost::future<ccd::auth::oauth2::token> auth()
 {
     using namespace ccd::auth::oauth2;
 
-    std::string token_file = "token.json";
+    std::string token_file = "/Users/iurii/proj/cld/tokens/gdrive.yurii.pelykh.json";
     std::string redirect_uri = "http://localhost:25000/";
 
     auto oa2token = load_token(token_file);
@@ -101,7 +102,8 @@ int main()
 {
     auth().then([](boost::future<ccd::auth::oauth2::token> t)
     {
-        ccd::http::authorized_oauth2_transport_factory f { t.get().access, ccd::http::cpprest_transport_factory };
+        //ccd::http::authorized_oauth2_transport_factory f { t.get().access, ccd::http::cpprest_transport_factory };
+        ccd::http::authorized_oauth2_transport_factory f{ t.get().access, ccd::http::curl_transport_factory };
         ccd::gdrive::gdrive g { std::move(f) };
         auto files_rsc = g.files_resource();
 
