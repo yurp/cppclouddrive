@@ -25,6 +25,7 @@ set(CCD_HDR
         include/ccd/details/http_executor.h
 
         include/ccd/http/authorized_oauth2_transport.h
+        include/ccd/http/beast_transport.h
         include/ccd/http/curl_transport.h # should be optional!
         include/ccd/http/http_transport.h
         include/ccd/http/cpprest_transport.h # should be optional!
@@ -54,6 +55,7 @@ set(CCD_SRC
         src/details/http_executor.cpp
 
         src/http/authorized_oauth2_transport.cpp
+        src/http/beast_transport.cpp
         src/http/curl_transport.cpp # should be optional!
         src/http/http_transport.cpp
         src/http/cpprest_transport.cpp # should be optional!

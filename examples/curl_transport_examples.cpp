@@ -1,11 +1,16 @@
 
+#include <ccd/http/beast_transport.h>
 #include <ccd/http/curl_transport.h>
+
+#include <openssl/ssl.h>
 
 #include <iostream>
 
 int main()
 {
-    auto t = ccd::http::curl_transport_factory();
+    OpenSSL_add_ssl_algorithms();
+
+    auto t = ccd::http::beast_transport_factory();
 
     ccd::http::request r;
     r.method = "GET";
