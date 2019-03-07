@@ -64,7 +64,7 @@ TEST(utils_test, parse_json_from_string)
     ASSERT_TRUE(c["a"][6].as<ccd::var::map_t>().empty());
 
     ASSERT_TRUE(c["a"][7].is<ccd::var::vector_t>());
-    ASSERT_EQ(c["a"][7].as<ccd::var::vector_t>().size(), 1);
+    ASSERT_EQ(c["a"][7].as<ccd::var::vector_t>().size(), 1u);
     ASSERT_EQ(c["a"][7][0].as<ccd::var::int_t>(), 1);
 }
 

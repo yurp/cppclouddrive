@@ -67,7 +67,8 @@ void open_browser(const std::string& auth_uri)
     (void)system(browser_cmd.c_str());
 #else
     // NOTE: Linux/X11 only.
-    string_t browser_cmd(U("xdg-open \"") + auth_uri + U("\""));
+    using namespace utility::conversions;
+    utility::string_t browser_cmd(to_string_t("xdg-open \"") + auth_uri + to_string_t("\""));
     (void)system(browser_cmd.c_str());
 #endif
 }
