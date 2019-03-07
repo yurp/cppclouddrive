@@ -1,4 +1,4 @@
-dist: trusty
+dist: xenial
 sudo: false
 
 language:
@@ -14,15 +14,27 @@ addons:
       - gcc-8
       - g++-8
       - cmake
-      - boost1.68
-      - libcpprest-dev  
+      - libboost-all-dev
+      - libwebsocketpp-dev  
 
 before_script:
   - export CC=/usr/bin/gcc-8
   - export CXX=/usr/bin/g++-8
+  - git clone https://github.com/Microsoft/cpprestsdk.git casablanca
+  - mkdir casablanca_build && cd casablanca_build
+  - cmake -DBUILD_TESTS=OFF -DBUILD_SAMPLES=OFF -DCPPREST_EXCLUDE_WEBSOCKETS=OFF ../casablanca/
+  - sudo make install -j $(nproc)
+  - cd ..
+  - git clone https://github.com/Tencent/rapidjson.git rapidjson
+  - mkdir rapidjson_build && cd rapidjson_build
+  - cmake -DRAPIDJSON_BUILD_DOC=OFF -DRAPIDJSON_BUILD_EXAMPLES=OFF -DRAPIDJSON_BUILD_TESTS=OFF ../rapidjson
+  - sudo make install -j $(nproc)
+  - cd ..
 
 script:
   - mkdir out && cd out
+  - export CC=/usr/bin/gcc-8
+  - export CXX=/usr/bin/g++-8    
   - cmake -DCCD_BUILD_EXAMPLES=ON -DCCD_BUILD_TESTS=ON ..
   - cmake --build . -- -j $(nproc)
 
