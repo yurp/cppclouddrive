@@ -5,7 +5,7 @@
 // This code is licensed under MIT license
 
 #include <string>
-#include <unordered_map>
+#include <map>  // TODO: unordered map is better but it produce recursive variant which is not valid
 #include <variant>
 
 namespace ccd
@@ -19,7 +19,7 @@ struct var
     using int_t = int64_t;
     using double_t = double;
     using vector_t = std::vector<var>;
-    using map_t = std::unordered_map<std::string, var>;
+    using map_t = std::map<std::string, var>;
     using variant_t = std::variant<null_t, bool_t, string_t, int_t, double_t, vector_t, map_t>;
 
     var() : x(nullptr) {}
