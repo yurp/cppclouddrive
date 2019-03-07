@@ -37,4 +37,5 @@ script:
   - export CXX=/usr/bin/g++-8    
   - cmake -DCCD_BUILD_EXAMPLES=ON -DCCD_BUILD_TESTS=ON ..
   - cmake --build . -- -j $(nproc)
+  - ./tests/ccd_tests  
 

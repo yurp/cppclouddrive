@@ -1,5 +1,8 @@
 # C++ Cloud Drive (CCD)
 
+![](https://img.shields.io/github/license/yurp/cppclouddrive.svg?style=plastic)
+![](https://img.shields.io/travis/yurp/cppclouddrive.svg?style=plastic&logo=travis-ci)
+
 Async C++17 API for cloud drives. Supports Google Drive
 
 ## Google Drive

@@ -12,10 +12,10 @@ set(TESTS_SRC
 set(GDRIVE_TESTS_SRC
         gdrive/model/gdrive_user_test.cpp)
 
-add_executable(gdrive_tests ${TESTS_SRC} ${GDRIVE_TESTS_SRC} ${GOOGLETEST_SRC})
-target_link_libraries(gdrive_tests
+add_executable(ccd_tests ${TESTS_SRC} ${GDRIVE_TESTS_SRC} ${GOOGLETEST_SRC})
+target_link_libraries(ccd_tests
         ccd)
-target_include_directories(gdrive_tests
+target_include_directories(ccd_tests
         PRIVATE
         libs/googletest/googletest
         libs/googletest/googletest/include)
