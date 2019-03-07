@@ -81,6 +81,7 @@ set(CCD_SRC
 add_library(ccd ${CCD_HDR} ${CCD_SRC})
 target_link_libraries(ccd
         PUBLIC
+        Boost::system
         Boost::thread
         cpprestsdk::cpprest
         curl)

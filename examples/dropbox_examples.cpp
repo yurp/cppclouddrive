@@ -2,18 +2,18 @@
 #include <ccd/auth.h>
 #include <ccd/dropbox/dropbox.h>
 #include <ccd/http/cpprest_transport.h>
-#include <ccd/http/curl_transport.h>
+#include <ccd/http/beast_transport.h>
 
 #include <iostream>
 
 // set your app id here or define outside
 #ifndef DROPBOX_APP_ID
-#define DROPBOX_APP_ID "wmk4i5hvpvrisqe"
+#define DROPBOX_APP_ID ""
 #endif
 
 // set your app's secret key here or define outside
 #ifndef DROPBOX_SECRET_KEY
-#define DROPBOX_SECRET_KEY "bvp6scvgg651no8"
+#define DROPBOX_SECRET_KEY ""
 #endif
 
 
@@ -21,7 +21,7 @@ boost::future<ccd::auth::oauth2::token> auth()
 {
     using namespace ccd::auth::oauth2;
 
-    std::string token_file = "/Users/iurii/proj/cld/tokens/dropbox.yurp1980.json";
+    std::string token_file = "token.json";
     std::string redirect_uri = "http://localhost:25000/";
 
     auto oa2token = load_token(token_file);
@@ -64,7 +64,7 @@ int main()
     auth().then([](boost::future<ccd::auth::oauth2::token> t)
     {
         //ccd::http::authorized_oauth2_transport_factory f{ t.get().access, ccd::http::cpprest_transport_factory };
-        ccd::http::authorized_oauth2_transport_factory f{ t.get().access, ccd::http::curl_transport_factory };
+        ccd::http::authorized_oauth2_transport_factory f { t.get().access, ccd::http::beast_transport_factory };
         ccd::dropbox::dropbox d{ std::move(f) };
         auto file_res = d.files_resource();
 
@@ -80,9 +80,9 @@ int main()
     .unwrap().then([](ccd::future_tuple<ccd::dropbox::dropbox,
                                         std::string,
                                         std::string,
-                                        ccd::dropbox::model::metadata_list> res)
+                                        ccd::dropbox::model::metadata_list> f)
     {
-        auto [ f1, f2, f3, f4 ] = res.get();
+        auto [ f1, f2, f3, f4 ] = f.get();
         ccd::dropbox::dropbox d = f1.get();
         auto s1 = f2.get();
         auto s2 = f3.get();

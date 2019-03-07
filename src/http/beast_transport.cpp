@@ -9,10 +9,13 @@
 #include <boost/asio/ssl/error.hpp>
 #include <boost/asio/ssl/stream.hpp>
 
+#include <openssl/ssl.h>
+
 #include <iostream>
 
 #include <mutex>
 #include <thread>
+#include <unordered_set>
 
 namespace ccd::http
 {
@@ -23,6 +26,8 @@ namespace
 using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 namespace ssl = boost::asio::ssl;       // from <boost/asio/ssl.hpp>
 namespace http = boost::beast::http;    // from <boost/beast/http.hpp>
+
+std::once_flag f;
 
 void load_root_certificates(ssl::context& ctx)
 {
@@ -82,119 +87,135 @@ void load_root_certificates(ssl::context& ctx)
     }
 }
 
-class beast_transport
+std::string urlencode(std::string s)
 {
-public:
-    beast_transport() {}
-    beast_transport(beast_transport&& other) : m_threads(std::move(other.m_threads)) { }
-    beast_transport(const beast_transport& ) { }
-
-    response_future operator()(request r)
+    static const std::unordered_set<int> unreserved
     {
-        boost::promise<ccd::http::response> p;
-        auto f = p.get_future();
-        m_threads.emplace_back([p = std::move(p), r = std::move(r)]() mutable
+        'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+        'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+        'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+        'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '_', '.', '~'
+    };
+
+    std::string encoded;
+    for (auto c: s)
+    {
+        if (unreserved.count(c) > 0)
         {
-            try
-            {
-                boost::asio::io_context ioc;
-                ssl::context ctx { ssl::context::sslv23_client };
-                load_root_certificates(ctx);
-
-                tcp::resolver resolver { ioc };
-                ssl::stream<tcp::socket> stream { ioc, ctx };
-
-                auto host = r.host.substr(8);
-
-                if (!SSL_set_tlsext_host_name(stream.native_handle(), host.c_str()))
-                {
-                    boost::system::error_code ec { static_cast<int>(::ERR_get_error()),
-                                                   boost::asio::error::get_ssl_category() };
-                    boost::throw_exception(boost::system::system_error { ec });
-                }
-
-                auto const results = resolver.resolve(host.c_str(), "443");
-                boost::asio::connect(stream.next_layer(), results.begin(), results.end());
-                stream.handshake(ssl::stream_base::client);
-
-                auto target = r.path;
-                char c = '?';
-                for (const auto& q: r.queries)
-                {
-                    target += c;
-                    c = '&';
-                    target += q.first + "=" + q.second; // TODO: encode()
-                }
-
-                boost::beast::http::request<http::string_body> req { http::string_to_verb(r.method), target, 11 };
-                req.set(http::field::host, host);
-                req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
-
-                for (const auto h: r.headers)
-                {
-                    req.set(h.first, h.second);
-                }
-
-                if (!r.body.empty())
-                {
-                    req.body() = r.body;
-                    req.set(http::field::content_type, r.content_type);
-                }
-
-                std::cerr << req << "\n\n\n";
-
-                http::write(stream, req);
-                boost::beast::flat_buffer buffer;
-                http::response<http::dynamic_body> res;
-                http::read(stream, buffer, res);
-                std::cout << res << std::endl;
-
-                boost::system::error_code ec;
-                stream.shutdown(ec);
-                if(ec == boost::asio::error::eof)
-                {
-                    // Rationale:
-                    // http://stackoverflow.com/questions/25587403/boost-asio-ssl-async-shutdown-always-finishes-with-an-error
-                    ec.assign(0, ec.category());
-                }
-
-                if(ec)
-                {
-                    boost::throw_exception(boost::system::system_error { ec });
-                }
-
-                ccd::http::response resp;
-                std::stringstream ss;
-                ss << res;
-                resp.body = ss.str();
-                resp.code = 200; //boost::beast::http::st res.result();
-                std::cerr << resp.body << "\n\n\n";
-            }
-            catch(...)
-            {
-                p.set_exception(boost::current_exception());
-            }
-        });
-
-        return f;
+            encoded += c;
+        }
+        else
+        {
+            char hex[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+            auto uc = static_cast<unsigned char>(c);
+            encoded += '%';
+            encoded += hex[uc >> 4];
+            encoded += hex[uc & 0xF];
+        }
     }
 
-    ~beast_transport()
+    return encoded;
+}
+
+bool is_ssl_short_read_error(boost::system::error_code ec)
+{
+    static const long short_read_error = 335544539;
+    return ec.category() == boost::asio::error::ssl_category && ec.value() == short_read_error;
+}
+
+
+response_future beast_transport(request r)
+{
+    return boost::async(boost::launch::async, [r = std::move(r)]
     {
-        for (auto& t: m_threads)
-            if (t.joinable())
-                t.join();
-    }
+        using namespace std::literals;
 
-private:
-    std::vector<std::thread> m_threads;
-};
+        boost::asio::io_context ioc;
+        ssl::context ctx{ ssl::context::sslv23_client };
+        load_root_certificates(ctx);
+
+        tcp::resolver resolver{ ioc };
+        ssl::stream<tcp::socket> stream{ ioc, ctx };
+
+        auto host = r.host.substr(8);
+
+        if (!SSL_set_tlsext_host_name(stream.native_handle(), host.c_str()))
+        {
+            boost::system::error_code ec{
+                static_cast<int>(::ERR_get_error()),
+                boost::asio::error::get_ssl_category()
+            };
+            boost::throw_exception(boost::system::system_error{ ec });
+        }
+
+        auto const results = resolver.resolve(host.c_str(), "443");
+        boost::asio::connect(stream.next_layer(), results.begin(), results.end());
+        stream.handshake(ssl::stream_base::client);
+
+        auto target = r.path.empty() ? "/"s : r.path;
+        char c = '?';
+        for (const auto& q: r.queries)
+        {
+            target += c;
+            c = '&';
+            target += urlencode(q.first) + "=" + urlencode(q.second); // TODO: encode()
+        }
+
+        boost::beast::http::request<http::string_body> req{ http::string_to_verb(r.method), target, 11 };
+        req.set(http::field::host, host);
+        req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
+
+        for (const auto h: r.headers)
+        {
+            req.set(h.first, h.second);
+        }
+
+        if (!r.body.empty())
+        {
+            req.body() = r.body;
+            req.set(http::field::content_type, r.content_type);
+            req.prepare_payload();
+        }
+
+        std::cerr << req << "\n\n\n";
+
+        http::write(stream, req);
+        boost::beast::flat_buffer buffer;
+        http::response<http::string_body> res;
+        http::read(stream, buffer, res);
+
+        boost::system::error_code ec;
+        stream.shutdown(ec);
+
+
+        if (ec == boost::asio::error::eof || is_ssl_short_read_error(ec))
+        {
+            // Rationale:
+            // http://stackoverflow.com/questions/25587403/boost-asio-ssl-async-shutdown-always-finishes-with-an-error
+            ec.assign(0, ec.category());
+        }
+
+        if (ec)
+        {
+            throw boost::system::system_error{ ec };
+        }
+
+        ccd::http::response resp;
+        resp.body = res.body();
+        resp.code = res.result_int();
+        std::cerr << resp.body << "\n\n\n";
+
+        return resp;
+    });
+}
 
 }
 
 transport_func beast_transport_factory()
 {
-    return beast_transport {};
+    std::call_once(f, [] { OpenSSL_add_ssl_algorithms(); });
+    return beast_transport;
 }
 
 }

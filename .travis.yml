@@ -14,17 +14,27 @@ addons:
       - gcc-8
       - g++-8
       - cmake
-      - libboost-all-dev
-      - libwebsocketpp-dev  
+      - libwebsocketpp-dev
+      - wget
 
 before_script:
   - export CC=/usr/bin/gcc-8
   - export CXX=/usr/bin/g++-8
+
+  - wget https://dl.bintray.com/boostorg/release/1.69.0/source/boost_1_69_0.tar.gz
+  - tar xf boost_1_69_0.tar.gz
+  - cd boost_1_69_0
+  - ./bootstrap.sh --with-libraries=system,thread,random,filesystem,chrono,atomic,date_time,regex
+  - ./b2 --toolset=gcc-8
+  - sudo ./b2 -d0 install
+  - cd ..
+
   - git clone https://github.com/Microsoft/cpprestsdk.git casablanca
   - mkdir casablanca_build && cd casablanca_build
   - cmake -DBUILD_TESTS=OFF -DBUILD_SAMPLES=OFF -DCPPREST_EXCLUDE_WEBSOCKETS=OFF ../casablanca/
   - sudo make install -j $(nproc)
   - cd ..
+
   - git clone https://github.com/Tencent/rapidjson.git rapidjson
   - mkdir rapidjson_build && cd rapidjson_build
   - cmake -DRAPIDJSON_BUILD_DOC=OFF -DRAPIDJSON_BUILD_EXAMPLES=OFF -DRAPIDJSON_BUILD_TESTS=OFF ../rapidjson
@@ -34,7 +44,7 @@ before_script:
 script:
   - mkdir out && cd out
   - export CC=/usr/bin/gcc-8
-  - export CXX=/usr/bin/g++-8    
+  - export CXX=/usr/bin/g++-8
   - cmake -DCCD_BUILD_EXAMPLES=ON -DCCD_BUILD_TESTS=ON ..
   - cmake --build . -- -j $(nproc)
   - ./tests/ccd_tests  
