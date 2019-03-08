@@ -10,6 +10,37 @@
 namespace ccd
 {
 
+std::string urlencode(std::string s)
+{
+    static const std::unordered_set<int> unreserved
+    {
+        'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+        'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+        'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+        'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '_', '.', '~'
+    };
+
+    std::string encoded;
+    for (auto c: s)
+    {
+        if (unreserved.count(c) > 0)
+        {
+            encoded += c;
+        }
+        else
+        {
+            char hex[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+            auto uc = static_cast<unsigned char>(c);
+            encoded += '%';
+            encoded += hex[uc >> 4];
+            encoded += hex[uc & 0xF];
+        }
+    }
+
+    return encoded;
+}
+
 var from_json(const std::string& s)
 {
     using namespace rapidjson;

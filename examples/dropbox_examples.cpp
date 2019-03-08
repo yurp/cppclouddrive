@@ -1,39 +1,37 @@
 
 #include <ccd/auth.h>
 #include <ccd/dropbox/dropbox.h>
-#include <ccd/http/cpprest_transport.h>
 #include <ccd/http/beast_transport.h>
 
 #include <iostream>
 
 // set your app id here or define outside
 #ifndef DROPBOX_APP_ID
-#define DROPBOX_APP_ID ""
+#define DROPBOX_APP_ID "wmk4i5hvpvrisqe"
 #endif
 
 // set your app's secret key here or define outside
 #ifndef DROPBOX_SECRET_KEY
-#define DROPBOX_SECRET_KEY ""
+#define DROPBOX_SECRET_KEY "bvp6scvgg651no8"
 #endif
 
 
 boost::future<ccd::auth::oauth2::token> auth()
 {
-    using namespace ccd::auth::oauth2;
-
-    std::string token_file = "token.json";
+    std::string token_file = "/Users/iurii/proj/src/cldrv/tokens/dropbox___7.yurp1980.json";
     std::string redirect_uri = "http://localhost:25000/";
 
-    auto oa2token = load_token(token_file);
+    auto oa2token = ccd::auth::oauth2::load_token(token_file);
     if (!oa2token.access.empty())
     {
         return boost::make_ready_future(oa2token);
     }
 
-    return dropbox::automatic(DROPBOX_APP_ID, DROPBOX_SECRET_KEY, redirect_uri).then([token_file](boost::future<token> ft)
+    ccd::auth::oauth2_dropbox oa2 { DROPBOX_APP_ID, DROPBOX_SECRET_KEY };
+    return oa2.automatic(redirect_uri).then([token_file](boost::future<ccd::auth::oauth2::token> ft)
         {
             auto t = ft.get();
-            save_token(t, token_file);
+            ccd::auth::oauth2::save_token(t, token_file);
             return t;
         });
 }
@@ -63,7 +61,6 @@ int main()
 {
     auth().then([](boost::future<ccd::auth::oauth2::token> t)
     {
-        //ccd::http::authorized_oauth2_transport_factory f{ t.get().access, ccd::http::cpprest_transport_factory };
         ccd::http::authorized_oauth2_transport_factory f { t.get().access, ccd::http::beast_transport_factory };
         ccd::dropbox::dropbox d{ std::move(f) };
         auto file_res = d.files_resource();
@@ -89,9 +86,9 @@ int main()
         auto mdlst = f4.get();
 
         auto s = d.files_resource().download_request("/main.cpp").exec().get();
-        std::cerr << s << "\n";
+        std::cout << s << "\n";
         s = d.files_resource().download_request("/main.cpp").set_range(5, 10).exec().get();
-        std::cerr << s << "\n";
+        std::cout << s << "\n";
 
         ccd::dropbox::model::metadata_list_t lst;
         if (auto l = mdlst.get_entries())
@@ -105,7 +102,7 @@ int main()
     .unwrap().then([](auto f)
     {
         ccd::dropbox::model::metadata_list_t lst = f.get();
-        std::cerr << "-------\n";
+        std::cout << "-------\n";
         for (auto& i: lst)
         {
             if (auto mi = i.get_media_info())
@@ -113,7 +110,7 @@ int main()
                 mi->set_time_taken("200-01-01T00:00:00Z");
                 i.set_media_info(mi);
             }
-            std::cerr << ccd::to_json(i.to_json()) << "\n";
+            std::cout << ccd::to_json(i.to_json()) << "\n";
             //std::cerr << i.get_path_display().value_or("?")
             //          << "\t[" << i.get_id().value_or("?") << "]"
             //          << ", " << i.get_size().value_or(-1)

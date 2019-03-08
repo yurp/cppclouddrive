@@ -1,6 +1,8 @@
 
 #include <ccd/http/beast_transport.h>
 
+#include <ccd/utils.h>
+
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
@@ -85,37 +87,6 @@ void load_root_certificates(ssl::context& ctx)
     {
         boost::throw_exception(boost::system::system_error { ec });
     }
-}
-
-std::string urlencode(std::string s)
-{
-    static const std::unordered_set<int> unreserved
-    {
-        'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
-        'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-        'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
-        'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
-        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '_', '.', '~'
-    };
-
-    std::string encoded;
-    for (auto c: s)
-    {
-        if (unreserved.count(c) > 0)
-        {
-            encoded += c;
-        }
-        else
-        {
-            char hex[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
-            auto uc = static_cast<unsigned char>(c);
-            encoded += '%';
-            encoded += hex[uc >> 4];
-            encoded += hex[uc & 0xF];
-        }
-    }
-
-    return encoded;
 }
 
 bool is_ssl_short_read_error(boost::system::error_code ec)

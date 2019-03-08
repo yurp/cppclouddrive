@@ -1,6 +1,5 @@
 
 #include <ccd/auth.h>
-#include <ccd/http/cpprest_transport.h>
 #include <ccd/http/beast_transport.h>
 #include <ccd/gdrive/gdrive.h>
 
@@ -8,25 +7,24 @@
 
 // set your app id here or define outside
 #ifndef GDRIVE_APP_ID
-#define GDRIVE_APP_ID ""
+#define GDRIVE_APP_ID "591088338489-l3j9itq32r02pn46c12m1dnv2hasonhe.apps.googleusercontent.com"
 #endif
 
 // set your app's secret key here or define outside
 #ifndef GDRIVE_SECRET_KEY
-#define GDRIVE_SECRET_KEY ""
+#define GDRIVE_SECRET_KEY "cJwtdu4RiZtkYa04kTXbdYua"
 #endif
 
 boost::future<ccd::auth::oauth2::token> auth()
 {
-    using namespace ccd::auth::oauth2;
-
-    std::string token_file = "token.json";
+    std::string token_file = "/Users/iurii/proj/src/cldrv/tokens/gdrive_yurii.pelykh_777.json";
     std::string redirect_uri = "http://localhost:25000/";
 
-    auto oa2token = load_token(token_file);
+    ccd::auth::oauth2_gdrive oa2 { GDRIVE_APP_ID, GDRIVE_SECRET_KEY };
+    auto oa2token = ccd::auth::oauth2::load_token(token_file);
     if (!oa2token.refresh.empty())
     {
-        return gdrive::refresh(GDRIVE_APP_ID, GDRIVE_SECRET_KEY, oa2token.refresh);
+        return oa2.refresh(oa2token.refresh);
     }
 
     if (!oa2token.access.empty())
@@ -34,10 +32,10 @@ boost::future<ccd::auth::oauth2::token> auth()
         return boost::make_ready_future(oa2token);
     }
 
-    return gdrive::automatic(GDRIVE_APP_ID, GDRIVE_SECRET_KEY, redirect_uri).then([token_file](boost::future<token> ft)
+    return oa2.automatic(redirect_uri).then([token_file](boost::future<ccd::auth::oauth2::token> ft)
     {
         auto t = ft.get();
-        save_token(t, token_file);
+        ccd::auth::oauth2::save_token(t, token_file);
         return t;
     });
 }
@@ -102,7 +100,6 @@ int main()
 {
     auth().then([](boost::future<ccd::auth::oauth2::token> t)
     {
-        //ccd::http::authorized_oauth2_transport_factory f { t.get().access, ccd::http::cpprest_transport_factory };
         ccd::http::authorized_oauth2_transport_factory f{ t.get().access, ccd::http::beast_transport_factory };
         ccd::gdrive::gdrive g { std::move(f) };
         auto files_rsc = g.files_resource();

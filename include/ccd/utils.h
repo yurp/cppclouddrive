@@ -8,9 +8,12 @@
 #include <ccd/var.h>
 
 #include <optional>
+#include <unordered_set>
 
 namespace ccd
 {
+
+std::string urlencode(std::string s);
 
 var from_json(const std::string& s);
 std::string to_json(const var& v);

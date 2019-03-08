@@ -85,7 +85,7 @@ ccd::http::request list_folder::build_request()
     ccd::http::request e;
     e.method = "POST";
     e.host = "https://api.dropboxapi.com";
-    e.path = "2/files/list_folder";
+    e.path = "/2/files/list_folder";
     e.content_type = "application/json";
     e.body = to_json(m_json);
 
@@ -114,7 +114,7 @@ ccd::http::request list_folder_continue::build_request()
     ccd::http::request e;
     e.method = "POST";
     e.host = "https://api.dropboxapi.com";
-    e.path = "2/files/list_folder/continue";
+    e.path = "/2/files/list_folder/continue";
     e.content_type = "application/json";
     e.body = to_json(m_json);
 

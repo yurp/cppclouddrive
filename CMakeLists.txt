@@ -6,8 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(Boost REQUIRED COMPONENTS thread)
-find_package(cpprestsdk REQUIRED)
-find_package(CURL REQUIRED)
+find_package(OpenSSL REQUIRED)
 find_package(RapidJSON REQUIRED)
 
 option(CCD_BUILD_EXAMPLES "build examples" OFF)
@@ -26,9 +25,7 @@ set(CCD_HDR
 
         include/ccd/http/authorized_oauth2_transport.h
         include/ccd/http/beast_transport.h
-        include/ccd/http/curl_transport.h # should be optional!
         include/ccd/http/http_transport.h
-        include/ccd/http/cpprest_transport.h # should be optional!
 
         include/ccd/dropbox/dropbox.h
         include/ccd/dropbox/model/dropbox_metadata.h
@@ -56,9 +53,7 @@ set(CCD_SRC
 
         src/http/authorized_oauth2_transport.cpp
         src/http/beast_transport.cpp
-        src/http/curl_transport.cpp # should be optional!
         src/http/http_transport.cpp
-        src/http/cpprest_transport.cpp # should be optional!
 
         src/dropbox/dropbox.cpp
         src/dropbox/model/dropbox_metadata.cpp
@@ -83,8 +78,7 @@ target_link_libraries(ccd
         PUBLIC
         Boost::system
         Boost::thread
-        cpprestsdk::cpprest
-        curl)
+        OpenSSL::SSL)
 target_include_directories(ccd
         PUBLIC
         include)

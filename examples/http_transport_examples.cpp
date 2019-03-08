@@ -1,6 +1,5 @@
 
 #include <ccd/http/beast_transport.h>
-#include <ccd/http/curl_transport.h>
 
 #include <iostream>
 

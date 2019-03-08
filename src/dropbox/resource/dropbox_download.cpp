@@ -27,7 +27,7 @@ ccd::http::request download::build_request()
     ccd::http::request e;
     e.method = "POST";
     e.host = "https://content.dropboxapi.com";
-    e.path = "2/files/download";
+    e.path = "/2/files/download";
 
     e.headers.emplace_back("Dropbox-API-Arg", to_json(m_json));
     if (m_range)
