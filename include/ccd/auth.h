@@ -22,7 +22,7 @@ public:
 
     static void save_token(const token& t, const std::string& fname);
     static token load_token(const std::string& fname);
-    // TODO: patch_token(const token& t, const std::string& fname);
+    static void patch_token(const token& t, const std::string& fname);
 
     oauth2(std::string app_id, std::string app_secret, std::string auth_uri, std::string token_uri);
 

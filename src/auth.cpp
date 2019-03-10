@@ -75,6 +75,7 @@ std::pair<boost::future<void>, boost::future<std::string>> code_from_listener(st
         net::io_context ioc{ 1 };
         tcp::acceptor acceptor{ ioc, { net::ip::make_address("0.0.0.0"), port } };
         std::string out;
+
         started_promise.set_value();
         while (out.empty())
         {
@@ -219,9 +220,9 @@ void oauth2::save_token(const oauth2::token& t, const std::string& fname)
     if (auto f = std::ofstream { fname })
     {
         ccd::var js { ccd::var::map_t { { access_token_field, t.access },
-                                        { access_token_field, t.refresh },
-                                        { access_token_field, t.type },
-                                        { access_token_field, t.scope }, }};
+                                        { refresh_token_field, t.refresh },
+                                        { token_type_field, t.type },
+                                        { scope_field, t.scope }, }};
 
         f << ccd::to_json(js);
     }
@@ -235,6 +236,34 @@ oauth2::token oauth2::load_token(const std::string& fname)
     }
 
     return oauth2::token { };
+}
+
+void oauth2::patch_token(const oauth2::token& t, const std::string& fname)
+{
+    auto patched = load_token(fname);
+
+    if (!t.access.empty())
+    {
+        patched.access = t.access;
+    }
+    if (!t.refresh.empty())
+    {
+        patched.refresh = t.refresh;
+    }
+    if (!t.type.empty())
+    {
+        patched.type = t.type;
+    }
+    if (!t.scope.empty())
+    {
+        patched.scope = t.scope;
+    }
+    if (!t.access.empty())
+    {
+        patched.access = t.access;
+    }
+
+    save_token(patched, fname);
 }
 
 boost::future<oauth2::token> oauth2::automatic(const std::string& redirect_uri,

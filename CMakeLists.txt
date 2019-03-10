@@ -29,6 +29,9 @@ set(CCD_HDR
 
         include/ccd/dropbox/dropbox.h
         include/ccd/dropbox/model/dropbox_metadata.h
+        include/ccd/dropbox/resource/dropbox_copy.h
+        include/ccd/dropbox/resource/dropbox_create_folder.h
+        include/ccd/dropbox/resource/dropbox_delete.h
         include/ccd/dropbox/resource/dropbox_download.h
         include/ccd/dropbox/resource/dropbox_files.h
         include/ccd/dropbox/resource/dropbox_list_folder.h
@@ -57,6 +60,9 @@ set(CCD_SRC
 
         src/dropbox/dropbox.cpp
         src/dropbox/model/dropbox_metadata.cpp
+        src/dropbox/resource/dropbox_copy.cpp
+        src/dropbox/resource/dropbox_create_folder.cpp
+        src/dropbox/resource/dropbox_delete.cpp
         src/dropbox/resource/dropbox_download.cpp
         src/dropbox/resource/dropbox_files.cpp
         src/dropbox/resource/dropbox_list_folder.cpp

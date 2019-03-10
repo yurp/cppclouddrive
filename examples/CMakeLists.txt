@@ -8,5 +8,11 @@ target_link_libraries(gdrive_examples ccd)
 add_executable(dropbox_examples dropbox_examples.cpp)
 target_link_libraries(dropbox_examples ccd)
 
+add_executable(dropbox_create_folder_example dropbox/dropbox_create_folder_example.cpp)
+target_link_libraries(dropbox_create_folder_example ccd)
+
+add_executable(dropbox_delete_example dropbox/dropbox_delete_example.cpp)
+target_link_libraries(dropbox_delete_example ccd)
+
 add_executable(http_transport_examples http_transport_examples.cpp)
 target_link_libraries(http_transport_examples ccd)

@@ -5,22 +5,18 @@
 
 #include <iostream>
 
-// set your app id here or define outside
-#ifndef GDRIVE_APP_ID
-#define GDRIVE_APP_ID "591088338489-l3j9itq32r02pn46c12m1dnv2hasonhe.apps.googleusercontent.com"
-#endif
-
-// set your app's secret key here or define outside
-#ifndef GDRIVE_SECRET_KEY
-#define GDRIVE_SECRET_KEY "cJwtdu4RiZtkYa04kTXbdYua"
-#endif
-
 boost::future<ccd::auth::oauth2::token> auth()
 {
-    std::string token_file = "/Users/iurii/proj/src/cldrv/tokens/gdrive_yurii.pelykh_777.json";
+    std::string token_file = "/Users/iurii/proj/src/cldrv/tokens/gdrive_yurii.pelykh_7_7_7.json";
     std::string redirect_uri = "http://localhost:25000/";
+    auto app_id = std::getenv("DROPBOX_APP_ID");
+    auto app_secret = std::getenv("DROPBOX_SECRET_KEY");
+    if (app_id == nullptr || app_secret == nullptr)
+    {
+        boost::throw_exception(std::runtime_error{ "app credentials aren't set" });
+    }
 
-    ccd::auth::oauth2_gdrive oa2 { GDRIVE_APP_ID, GDRIVE_SECRET_KEY };
+    ccd::auth::oauth2_gdrive oa2 { app_id, app_secret };
     auto oa2token = ccd::auth::oauth2::load_token(token_file);
     if (!oa2token.refresh.empty())
     {

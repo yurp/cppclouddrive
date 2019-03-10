@@ -15,6 +15,16 @@ files::files(ccd::http::transport_factory factory)
 {
 }
 
+copy files::copy_request(std::string from_path, std::string to_path)
+{
+    return copy { m_http_transport_factory(), from_path, to_path };
+}
+
+create_folder files::create_folder_request(std::string path)
+{
+    return create_folder { m_http_transport_factory(), path };
+}
+
 download files::download_request(std::string path)
 {
     return download { m_http_transport_factory(), std::move(path) };

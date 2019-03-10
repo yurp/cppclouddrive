@@ -95,7 +95,6 @@ bool is_ssl_short_read_error(boost::system::error_code ec)
     return ec.category() == boost::asio::error::ssl_category && ec.value() == short_read_error;
 }
 
-
 response_future beast_transport(request r)
 {
     return boost::async(boost::launch::async, [r = std::move(r)]
@@ -113,10 +112,7 @@ response_future beast_transport(request r)
 
         if (!SSL_set_tlsext_host_name(stream.native_handle(), host.c_str()))
         {
-            boost::system::error_code ec{
-                static_cast<int>(::ERR_get_error()),
-                boost::asio::error::get_ssl_category()
-            };
+            boost::system::error_code ec{ static_cast<int>(::ERR_get_error()), boost::asio::error::get_ssl_category() };
             boost::throw_exception(boost::system::system_error{ ec });
         }
 

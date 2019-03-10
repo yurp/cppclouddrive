@@ -5,21 +5,16 @@
 
 #include <iostream>
 
-// set your app id here or define outside
-#ifndef DROPBOX_APP_ID
-#define DROPBOX_APP_ID "wmk4i5hvpvrisqe"
-#endif
-
-// set your app's secret key here or define outside
-#ifndef DROPBOX_SECRET_KEY
-#define DROPBOX_SECRET_KEY "bvp6scvgg651no8"
-#endif
-
-
 boost::future<ccd::auth::oauth2::token> auth()
 {
     std::string token_file = "/Users/iurii/proj/src/cldrv/tokens/dropbox___7.yurp1980.json";
     std::string redirect_uri = "http://localhost:25000/";
+    auto app_id = std::getenv("DROPBOX_APP_ID");
+    auto app_secret = std::getenv("DROPBOX_SECRET_KEY");
+    if (app_id == nullptr || app_secret == nullptr)
+    {
+        boost::throw_exception(std::runtime_error{ "app credentials aren't set" });
+    }
 
     auto oa2token = ccd::auth::oauth2::load_token(token_file);
     if (!oa2token.access.empty())
@@ -27,7 +22,7 @@ boost::future<ccd::auth::oauth2::token> auth()
         return boost::make_ready_future(oa2token);
     }
 
-    ccd::auth::oauth2_dropbox oa2 { DROPBOX_APP_ID, DROPBOX_SECRET_KEY };
+    ccd::auth::oauth2_dropbox oa2 { app_id, app_secret };
     return oa2.automatic(redirect_uri).then([token_file](boost::future<ccd::auth::oauth2::token> ft)
         {
             auto t = ft.get();
@@ -96,12 +91,15 @@ int main()
             lst = std::move(*l);
         }
 
-        return mdlst.get_has_more().value_or(false) ? list_dir(std::move(lst), d.files_resource(), *mdlst.get_cursor())
-                                                    : boost::make_ready_future(lst);
+        auto list_future = mdlst.get_has_more().value_or(false)
+            ? list_dir(std::move(lst), d.files_resource(), *mdlst.get_cursor())
+            : boost::make_ready_future(lst);
+        return when_all(boost::make_ready_future(std::move(d)), std::move(list_future));
     })
-    .unwrap().then([](auto f)
+    .unwrap().then([](ccd::future_tuple<ccd::dropbox::dropbox, ccd::dropbox::model::metadata_list_t> f)
     {
-        ccd::dropbox::model::metadata_list_t lst = f.get();
+        auto [ f1, f2 ] = f.get();
+        ccd::dropbox::model::metadata_list_t lst = f2.get();
         std::cout << "-------\n";
         for (auto& i: lst)
         {
@@ -116,8 +114,29 @@ int main()
             //          << ", " << i.get_size().value_or(-1)
             //          << "\n";
         }
+
+        return f1.get();
     })
-    .get();
+    .then([](boost::future<ccd::dropbox::dropbox> f)
+    {
+        auto files_rsc = f.get().files_resource();
+        return files_rsc.copy_request("/main.cpp", "/main2.cpp").set_autorename(true).exec();
+    })
+    .unwrap().then([](boost::future<ccd::dropbox::model::metadata> f)
+    {
+        std::cout << ccd::to_json(f.get().to_json()) << "\n";
+    })
+    .then([](boost::future<void> f)
+    {
+        try
+        {
+            f.get();
+        }
+        catch (const ccd::http::exception& e)
+        {
+            std::cerr << "failed with code: " << e.http_code() << ", message:\n" << e.what() << "\n";
+        }
+    }).get();
 
     return 0;
 }
