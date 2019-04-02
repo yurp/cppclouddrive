@@ -54,7 +54,7 @@ template<typename T> struct handler_selector<void(boost::system::error_code, T)>
 {
     using future_t = boost::future<T>;
     boost::promise<T> m_promise;
-    void operator()(boost::system::error_code ec, T&& t)
+    void operator()(boost::system::error_code ec, T t) // TODO: why can't it compile T&& ???
     {
         ec ? m_promise.set_exception(boost::system::system_error{ ec })
            : m_promise.set_value(std::forward<T>(t));

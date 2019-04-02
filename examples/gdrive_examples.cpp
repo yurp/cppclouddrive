@@ -9,8 +9,8 @@ boost::future<ccd::auth::oauth2::token> auth()
 {
     std::string token_file = "/Users/iurii/proj/src/cldrv/tokens/gdrive_yurii.pelykh_7_7_7.json";
     std::string redirect_uri = "http://localhost:25000/";
-    auto app_id = std::getenv("DROPBOX_APP_ID");
-    auto app_secret = std::getenv("DROPBOX_SECRET_KEY");
+    auto app_id = std::getenv("GDRIVE_APP_ID");
+    auto app_secret = std::getenv("GDRIVE_SECRET_KEY");
     if (app_id == nullptr || app_secret == nullptr)
     {
         boost::throw_exception(std::runtime_error{ "app credentials aren't set" });
