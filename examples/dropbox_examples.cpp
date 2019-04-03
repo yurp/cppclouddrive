@@ -7,7 +7,7 @@
 
 boost::future<ccd::auth::oauth2::token> auth()
 {
-    std::string token_file = "/Users/iurii/proj/src/cldrv/tokens/dropbox___7.yurp1980.json";
+    std::string token_file = "/Users/iurii/proj/cld/tokens/dropbox.yurp1980.json";
     std::string redirect_uri = "http://localhost:25000/";
     auto app_id = std::getenv("DROPBOX_APP_ID");
     auto app_secret = std::getenv("DROPBOX_SECRET_KEY");
@@ -54,9 +54,12 @@ boost::future<ccd::dropbox::model::metadata_list_t> list_dir(ccd::dropbox::model
 
 int main()
 {
-    auth().then([](boost::future<ccd::auth::oauth2::token> t)
+    boost::asio::io_service ios;
+    boost::asio::io_service::work w { ios };
+
+    auto f = auth().then([&ios](boost::future<ccd::auth::oauth2::token> t)
     {
-        ccd::http::authorized_oauth2_transport_factory f { t.get().access, ccd::http::beast_transport_factory };
+        ccd::http::authorized_oauth2_transport_factory f{ t.get().access, ccd::http::async_beast_transport_factory(ios) };
         ccd::dropbox::dropbox d{ std::move(f) };
         auto file_res = d.files_resource();
 
@@ -80,10 +83,8 @@ int main()
         auto s2 = f3.get();
         auto mdlst = f4.get();
 
-        auto s = d.files_resource().download_request("/main.cpp").exec().get();
-        std::cout << s << "\n";
-        s = d.files_resource().download_request("/main.cpp").set_range(5, 10).exec().get();
-        std::cout << s << "\n";
+        std::cout << s1 << "\n";
+        std::cout << s2 << "\n";
 
         ccd::dropbox::model::metadata_list_t lst;
         if (auto l = mdlst.get_entries())
@@ -125,6 +126,7 @@ int main()
     .unwrap().then([](boost::future<ccd::dropbox::model::metadata> f)
     {
         std::cout << ccd::to_json(f.get().to_json()) << "\n";
+        //return files_rsc.
     })
     .then([](boost::future<void> f)
     {
@@ -136,7 +138,14 @@ int main()
         {
             std::cerr << "failed with code: " << e.http_code() << ", message:\n" << e.what() << "\n";
         }
-    }).get();
+    })
+    .then([&ios](boost::future<void> )
+    {
+        ios.stop();
+    });
+
+    ios.run();
+    f.get();
 
     return 0;
 }

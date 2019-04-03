@@ -46,6 +46,10 @@ boost::system::error_code process_https_error(boost::system::error_code ec)
         std::cerr << "http error " << ec.message() << " processed\n";
         ec.assign(0, ec.category());
     }
+    if (ec)
+    {
+        std::cerr << ">>>>>>>>>http error " << ec.message() << " processed\n";
+    }
 
     return ec;
 }
@@ -141,7 +145,7 @@ boost::beast::http::request<http::string_body> make_beast_request(const request&
         req.prepare_payload();
     }
 
-    std::cerr << req << "\n\n\n";
+    std::cerr << "\nREQ---------------------------------------------------------------\n\n" << req << "\n---------------------------------------------------------------\n\n";
 
     return req;
 }
@@ -151,7 +155,7 @@ response to_response(const http::response<http::string_body>& res)
     ccd::http::response resp;
     resp.body = res.body();
     resp.code = res.result_int();
-    std::cerr << resp.body << "\n\n\n";
+    std::cerr << "\nRES---------------------------------------------------------------\n\n" << res << "\n---------------------------------------------------------------\n\n";
 
     return resp;
 }
@@ -215,7 +219,7 @@ response_future async_beast_transport(request r, boost::asio::io_context& ioc)
 
     auto host = r.host.substr(8);
 
-    tcp::resolver resolver { ioc };
+    auto resolver = std::make_shared<tcp::resolver>(ioc);
     auto stream = std::make_shared<ssl::stream<tcp::socket>>(ioc, ctx);
     auto buffer = std::make_shared<boost::beast::flat_buffer>(); // (Must persist between reads)
     auto resp =   std::make_shared<http::response<http::string_body>>();
@@ -229,30 +233,32 @@ response_future async_beast_transport(request r, boost::asio::io_context& ioc)
     }
 
     // Look up the domain name
-    return resolver.async_resolve(host.c_str(), "443", ftr_https)
+    return resolver->async_resolve(host.c_str(), "443", ftr_https)
         .then([stream](boost::future<tcp::resolver::results_type> f)
         {
             auto results = f.get();
             return boost::asio::async_connect(stream->next_layer(), results.begin(), results.end(), ftr_https);
         })
-        .unwrap().then([stream](boost::future<boost::asio::ip::tcp::resolver::iterator> )
+        .unwrap().then([stream](boost::future<boost::asio::ip::tcp::resolver::iterator> f)
         {
+            f.get();
             return stream->async_handshake(ssl::stream_base::client, ftr_https);
         })
-        .unwrap().then([stream, req](boost::future<void> )
+        .unwrap().then([stream, req](boost::future<void> f)
         {
+            f.get();
             return http::async_write(*stream, *req, ftr_https);
         })
-        .unwrap().then([stream, buffer, resp, req](boost::future<std::size_t> )
+        .unwrap().then([stream, buffer, resp, req](boost::future<std::size_t> f)
         {
             return http::async_read(*stream, *buffer, *resp, ftr_https);
         })
-        .unwrap().then([stream, buffer, resp, res](boost::future<std::size_t> )
+        .unwrap().then([stream, buffer, resp, res](boost::future<std::size_t> f)
         {
             *res = to_response(*resp);
             return stream->async_shutdown(ftr_https);
         })
-        .unwrap().then([stream, res, buffer](boost::future<void> )
+        .unwrap().then([resolver, stream, res, buffer](boost::future<void> )
         {
             return *res;
         });

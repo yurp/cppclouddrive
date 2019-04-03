@@ -1030,7 +1030,12 @@ std::optional <std::string> file::get_md5_checksum() const
 
 std::optional <int64_t> file::get_size() const
 {
-    return get_value<ccd::var::int_t>(m_json, "size");
+    if (auto sz = get_value<std::string>(m_json, "size"))
+    {
+        return std::stoll(*sz);
+    }
+
+    return std::nullopt;
 }
 
 std::optional <int64_t> file::get_quota_bytes_used() const

@@ -95,18 +95,11 @@ boost::future<void> print_getting_started_content(ccd::gdrive::v3::resource::fil
 int main()
 {
     boost::asio::io_service ios;
-    auto th = std::thread([&ios]
-    {
-        boost::asio::io_service::work w { ios };
-        ios.run();
+    boost::asio::io_service::work w { ios };
 
-    });
-
-    auth().then([&ios](boost::future<ccd::auth::oauth2::token> t)
-    //auth().then([](boost::future<ccd::auth::oauth2::token> t)
+    auto f = auth().then([&ios](boost::future<ccd::auth::oauth2::token> t)
     {
         ccd::http::authorized_oauth2_transport_factory f{ t.get().access, ccd::http::async_beast_transport_factory(ios) };
-        //ccd::http::authorized_oauth2_transport_factory f{ t.get().access, ccd::http::beast_transport_factory };
         ccd::gdrive::gdrive g { std::move(f) };
         auto files_rsc = g.files_resource();
 
@@ -130,13 +123,14 @@ int main()
             std::cerr << "failed with code: " << e.http_code() << ", message:\n" << e.what() << "\n";
         }
 
-    }).get();
-
-    ios.stop();
-    if (th.joinable())
+    })
+    .then([&ios](boost::future<void> )
     {
-        th.join();
-    }
+        ios.stop();
+    });
+
+    ios.run();
+    f.get();
 
     return 0;
 }
