@@ -3,13 +3,13 @@
 
 #include <ccd/utils.h>
 
-#include <boost/beast/core.hpp>
-#include <boost/beast/http.hpp>
-#include <boost/beast/version.hpp>
 #include <boost/asio/connect.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl/error.hpp>
 #include <boost/asio/ssl/stream.hpp>
+#include <boost/beast/core.hpp>
+#include <boost/beast/http.hpp>
+#include <boost/beast/version.hpp>
 
 #include <openssl/ssl.h>
 
@@ -30,6 +30,27 @@ namespace ssl = boost::asio::ssl;       // from <boost/asio/ssl.hpp>
 namespace http = boost::beast::http;    // from <boost/beast/http.hpp>
 
 std::once_flag f;
+
+bool is_ssl_short_read_error(boost::system::error_code ec)
+{
+    static const long short_read_error = 335544539;
+    return ec.category() == boost::asio::error::ssl_category && ec.value() == short_read_error;
+}
+
+boost::system::error_code process_https_error(boost::system::error_code ec)
+{
+    if (ec == boost::asio::error::eof || is_ssl_short_read_error(ec))
+    {
+        // Rationale:
+        // http://stackoverflow.com/questions/25587403/boost-asio-ssl-async-shutdown-always-finishes-with-an-error
+        std::cerr << "http error " << ec.message() << " processed\n";
+        ec.assign(0, ec.category());
+    }
+
+    return ec;
+}
+
+ccd::use_boost_future_ec_t ftr_https { process_https_error };
 
 void load_root_certificates(ssl::context& ctx)
 {
@@ -89,12 +110,6 @@ void load_root_certificates(ssl::context& ctx)
     }
 }
 
-bool is_ssl_short_read_error(boost::system::error_code ec)
-{
-    static const long short_read_error = 335544539;
-    return ec.category() == boost::asio::error::ssl_category && ec.value() == short_read_error;
-}
-
 boost::beast::http::request<http::string_body> make_beast_request(const request& r)
 {
     using namespace std::literals;
@@ -131,6 +146,27 @@ boost::beast::http::request<http::string_body> make_beast_request(const request&
     return req;
 }
 
+response to_response(const http::response<http::string_body>& res)
+{
+    ccd::http::response resp;
+    resp.body = res.body();
+    resp.code = res.result_int();
+    std::cerr << resp.body << "\n\n\n";
+
+    return resp;
+}
+
+boost::system::error_code set_tlsext_host_name(ssl::stream<tcp::socket>& stream, const std::string& host)
+{
+    if (!SSL_set_tlsext_host_name(stream.native_handle(), host.c_str()))
+    {
+        return boost::system::error_code{ static_cast<int>(::ERR_get_error()),
+                                          boost::asio::error::get_ssl_category() };
+    }
+
+    return boost::system::error_code { };
+}
+
 response_future beast_transport(request r)
 {
     return boost::async(boost::launch::async, [r = std::move(r)]
@@ -144,9 +180,8 @@ response_future beast_transport(request r)
 
         auto host = r.host.substr(8);
 
-        if (!SSL_set_tlsext_host_name(stream.native_handle(), host.c_str()))
+        if (auto ec = set_tlsext_host_name(stream, host))
         {
-            boost::system::error_code ec{ static_cast<int>(::ERR_get_error()), boost::asio::error::get_ssl_category() };
             boost::throw_exception(boost::system::system_error{ ec });
         }
 
@@ -163,30 +198,16 @@ response_future beast_transport(request r)
 
         boost::system::error_code ec;
         stream.shutdown(ec);
-
-
-        if (ec == boost::asio::error::eof || is_ssl_short_read_error(ec))
+        if (auto processed_ec = process_https_error(ec))
         {
-            // Rationale:
-            // http://stackoverflow.com/questions/25587403/boost-asio-ssl-async-shutdown-always-finishes-with-an-error
-            ec.assign(0, ec.category());
+            throw boost::system::system_error{ processed_ec };
         }
 
-        if (ec)
-        {
-            throw boost::system::system_error{ ec };
-        }
-
-        ccd::http::response resp;
-        resp.body = res.body();
-        resp.code = res.result_int();
-        std::cerr << resp.body << "\n\n\n";
-
-        return resp;
+        return to_response(res);
     });
 }
 
-response_future beast_transport2(request r, boost::asio::io_context& ioc)
+response_future async_beast_transport(request r, boost::asio::io_context& ioc)
 {
     ssl::context ctx{ ssl::context::sslv23_client };
     load_root_certificates(ctx);
@@ -199,57 +220,40 @@ response_future beast_transport2(request r, boost::asio::io_context& ioc)
     auto buffer = std::make_shared<boost::beast::flat_buffer>(); // (Must persist between reads)
     auto resp =   std::make_shared<http::response<http::string_body>>();
     auto res =    std::make_shared<ccd::http::response>();
+    auto req =    std::make_shared<boost::beast::http::request<http::string_body>>(make_beast_request(r));
 
     // Set SNI Hostname (many hosts need this to handshake successfully)
-    if (!SSL_set_tlsext_host_name(stream->native_handle(), host.c_str()))
+    if (auto ec = set_tlsext_host_name(*stream, host))
     {
-        boost::system::error_code ec{static_cast<int>(::ERR_get_error()), boost::asio::error::get_ssl_category()};
-        std::cerr << ec.message() << "\n";
         return boost::make_exceptional_future<ccd::http::response>(boost::system::system_error{ ec });
     }
 
-    // Set up an HTTP GET request message
-    //req_.version(version);
-    //req_.method(http::verb::get);
-    //req_.target(target);
-    //req_.set(http::field::host, host);
-    //req_.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
-
     // Look up the domain name
-    return resolver.async_resolve(host.c_str(), "443", ccd::ftr)
+    return resolver.async_resolve(host.c_str(), "443", ftr_https)
         .then([stream](boost::future<tcp::resolver::results_type> f)
         {
             auto results = f.get();
-            return boost::asio::async_connect(stream->next_layer(), results.begin(), results.end(), ccd::ftr);
+            return boost::asio::async_connect(stream->next_layer(), results.begin(), results.end(), ftr_https);
         })
-        .unwrap().then([stream](auto f) // TODO: type boost::future<tcp::endpoint> ???
+        .unwrap().then([stream](boost::future<boost::asio::ip::tcp::resolver::iterator> )
         {
-            f.get();
-            return stream->async_handshake(ssl::stream_base::client, ccd::ftr);
+            return stream->async_handshake(ssl::stream_base::client, ftr_https);
         })
-        .unwrap().then([stream, r = std::move(r)](boost::future<void> f)
+        .unwrap().then([stream, req](boost::future<void> )
         {
-            auto req = make_beast_request(r);
-            return http::async_write(*stream, req, ccd::ftr);
+            return http::async_write(*stream, *req, ftr_https);
         })
-        .unwrap().then([stream, buffer, resp](boost::future<std::size_t> f)
+        .unwrap().then([stream, buffer, resp, req](boost::future<std::size_t> )
         {
-            f.get();
-            return http::async_read(*stream, *buffer, *resp, ccd::ftr);
+            return http::async_read(*stream, *buffer, *resp, ftr_https);
         })
-        .unwrap().then([stream, buffer, resp, res](boost::future<std::size_t> f)
+        .unwrap().then([stream, buffer, resp, res](boost::future<std::size_t> )
         {
-            f.get();
-            res->body = resp->body();
-            res->code = resp->result_int();
-            std::cerr << res->body << "\n\n\n";
-
-            return stream->async_shutdown(ccd::ftr);
+            *res = to_response(*resp);
+            return stream->async_shutdown(ftr_https);
         })
-        .unwrap().then([stream, res](boost::future<void> f)
+        .unwrap().then([stream, res, buffer](boost::future<void> )
         {
-            f.get();
-            // TODO: catch short read (https://www.boost.org/doc/libs/1_69_0/libs/beast/example/http/client/async-ssl/http_client_async_ssl.cpp)
             return *res;
         });
 }
@@ -262,8 +266,19 @@ transport_func beast_transport_factory()
     return beast_transport;
 }
 
-// ---------------------------------------------------------------------------------------------------------------------
+async_beast_transport_factory::async_beast_transport_factory(boost::asio::io_context& ioc)
+    : m_ioc(ioc)
+{
 
+}
 
+transport_func async_beast_transport_factory::operator()()
+{
+    std::call_once(f, [] { OpenSSL_add_ssl_algorithms(); });
+    return [ioc = &m_ioc](request r)
+    {
+        return async_beast_transport(r, *ioc);
+    };
+}
 
 }

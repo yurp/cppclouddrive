@@ -7,7 +7,7 @@
 
 boost::future<ccd::auth::oauth2::token> auth()
 {
-    std::string token_file = "/Users/iurii/proj/src/cldrv/tokens/gdrive_yurii.pelykh_7_7_7.json";
+    std::string token_file = "/Users/iurii/proj/cld/tokens/gdrive.yurii.pelykh.json";
     std::string redirect_uri = "http://localhost:25000/";
     auto app_id = std::getenv("GDRIVE_APP_ID");
     auto app_secret = std::getenv("GDRIVE_SECRET_KEY");
@@ -94,9 +94,19 @@ boost::future<void> print_getting_started_content(ccd::gdrive::v3::resource::fil
 
 int main()
 {
-    auth().then([](boost::future<ccd::auth::oauth2::token> t)
+    boost::asio::io_service ios;
+    auto th = std::thread([&ios]
     {
-        ccd::http::authorized_oauth2_transport_factory f{ t.get().access, ccd::http::beast_transport_factory };
+        boost::asio::io_service::work w { ios };
+        ios.run();
+
+    });
+
+    auth().then([&ios](boost::future<ccd::auth::oauth2::token> t)
+    //auth().then([](boost::future<ccd::auth::oauth2::token> t)
+    {
+        ccd::http::authorized_oauth2_transport_factory f{ t.get().access, ccd::http::async_beast_transport_factory(ios) };
+        //ccd::http::authorized_oauth2_transport_factory f{ t.get().access, ccd::http::beast_transport_factory };
         ccd::gdrive::gdrive g { std::move(f) };
         auto files_rsc = g.files_resource();
 
@@ -121,6 +131,12 @@ int main()
         }
 
     }).get();
+
+    ios.stop();
+    if (th.joinable())
+    {
+        th.join();
+    }
 
     return 0;
 }
