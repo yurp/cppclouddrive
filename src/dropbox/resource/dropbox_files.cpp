@@ -28,16 +28,31 @@ create_folder files::create_folder_request(std::string path)
 download files::download_request(std::string path)
 {
     return download { m_http_transport_factory(), std::move(path) };
-};
+}
+
+get_metadata files::get_metadata_request(std::string path)
+{
+    return get_metadata { m_http_transport_factory(), std::move(path) };
+}
+
+del files::del_request(std::string path)
+{
+    return del { m_http_transport_factory(), std::move(path) };
+}
 
 list_folder files::list_folder_request(std::string path)
 {
     return list_folder { m_http_transport_factory(), std::move(path) };
-};
+}
 
 list_folder_continue files::list_folder_continue_request(std::string cursor)
 {
     return list_folder_continue { m_http_transport_factory(), std::move(cursor) };
+}
+
+move files::move_request(std::string from_path, std::string to_path)
+{
+    return move { m_http_transport_factory(), from_path, to_path };
 }
 
 }

@@ -120,9 +120,37 @@ int main()
     })
     .then([](boost::future<ccd::dropbox::dropbox> f)
     {
-        auto files_rsc = f.get().files_resource();
-        return files_rsc.copy_request("/main.cpp", "/main2.cpp").set_autorename(true).exec();
+        auto d = f.get();
+        auto files_rsc = d.files_resource();
+        return when_all(boost::make_ready_future(std::move(d)),
+                        files_rsc.move_request("/main2 (7).cpp", "/777.cpp").exec());
     })
+    .unwrap().then([](ccd::future_tuple<ccd::dropbox::dropbox, ccd::dropbox::model::metadata> f)
+    {
+        auto [f1, f2] = f.get();
+
+        try
+        {
+            std::cout << "relocated object: " << ccd::to_json(f2.get().to_json()) << "\n";
+        }
+        catch (const ccd::http::exception& e)
+        {
+            std::cout << "can't move: " << e.what() << "\n";
+        }
+
+        auto files_rsc = f1.get().files_resource();
+        return files_rsc.get_metadata_request("/main2 (10).cpp").exec();
+    })
+    //.then([](boost::future<ccd::dropbox::dropbox> f)
+    //{
+    //    auto files_rsc = f.get().files_resource();
+    //    return files_rsc.del_request("/main2 (11).cpp").exec();
+    //})
+    //.then([](boost::future<ccd::dropbox::dropbox> f)
+    //{
+    //    auto files_rsc = f.get().files_resource();
+    //    return files_rsc.copy_request("/main.cpp", "/main2.cpp").set_autorename(true).exec();
+    //})
     .unwrap().then([](boost::future<ccd::dropbox::model::metadata> f)
     {
         std::cout << ccd::to_json(f.get().to_json()) << "\n";
