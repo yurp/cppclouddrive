@@ -11,6 +11,7 @@
 #include <ccd/dropbox/resource/dropbox_get_metadata.h>
 #include <ccd/dropbox/resource/dropbox_list_folder.h>
 #include <ccd/dropbox/resource/dropbox_move.h>
+#include <ccd/dropbox/resource/dropbox_upload.h>
 
 namespace ccd::dropbox
 {
@@ -35,6 +36,7 @@ public:
     list_folder list_folder_request(std::string path = "");
     list_folder_continue list_folder_continue_request(std::string cursor);
     move move_request(std::string from_path, std::string to_path);
+    upload upload_request(std::string path, std::string content);
 
 private:
     files(ccd::http::transport_factory factory);

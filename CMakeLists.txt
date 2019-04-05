@@ -13,7 +13,6 @@ option(CCD_BUILD_EXAMPLES "build examples" OFF)
 option(CCD_BUILD_TESTS "build tests" OFF)
 
 add_compile_options(-Wall -Werror)
-add_definitions(-D_TURN_OFF_PLATFORM_STRING) # disable cpprestsdk U() macro, which may conflict with other libs
 
 set(CCD_HDR
         include/ccd/auth.h

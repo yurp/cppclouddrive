@@ -55,16 +55,16 @@ public:
 
     // TODO: add property_groups
 
-    boost::future<std::string> exec();
+    boost::future<model::metadata> exec();
 
 private:
     /// @param[in] (pattern="(/(.|[\r\n])*)|(ns:[0-9]+(/.*)?)|(id:.*)") Path in the user's Dropbox to save the file.
-    upload(ccd::http::transport_func http_transport, std::string path);
+    upload(ccd::http::transport_func http_transport, std::string path, std::string content);
 
     ccd::http::request build_request() override;
 
     var m_json;
-    std::optional<std::pair<int64_t, int64_t>> m_range;
+    std::string m_content;
 };
 
 }

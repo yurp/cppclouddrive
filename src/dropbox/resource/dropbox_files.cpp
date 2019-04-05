@@ -52,7 +52,12 @@ list_folder_continue files::list_folder_continue_request(std::string cursor)
 
 move files::move_request(std::string from_path, std::string to_path)
 {
-    return move { m_http_transport_factory(), from_path, to_path };
+    return move { m_http_transport_factory(), std::move(from_path), std::move(to_path) };
+}
+
+upload files::upload_request(std::string path, std::string content)
+{
+    return upload { m_http_transport_factory(), std::move(path), std::move(content) };
 }
 
 }

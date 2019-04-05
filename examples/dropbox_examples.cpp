@@ -7,7 +7,7 @@
 
 boost::future<ccd::auth::oauth2::token> auth()
 {
-    std::string token_file = "/Users/iurii/proj/cld/tokens/dropbox.yurp1980.json";
+    std::string token_file = "/Users/iurii/proj/src/cldrv/tokens/dropbox.yurp1980.json";
     std::string redirect_uri = "http://localhost:25000/";
     auto app_id = std::getenv("DROPBOX_APP_ID");
     auto app_secret = std::getenv("DROPBOX_SECRET_KEY");
@@ -138,8 +138,18 @@ int main()
             std::cout << "can't move: " << e.what() << "\n";
         }
 
+        auto d = f1.get();
+        auto files_rsc = d.files_resource();
+        return when_all(boost::make_ready_future(std::move(d)),
+                        files_rsc.get_metadata_request("/main2 (10).cpp").exec());
+    })
+    .unwrap().then([](ccd::future_tuple<ccd::dropbox::dropbox, ccd::dropbox::model::metadata> f)
+    {
+        auto [f1, f2] = f.get();
+        std::cout << "metadata: " << ccd::to_json(f2.get().to_json()) << "\n";
+
         auto files_rsc = f1.get().files_resource();
-        return files_rsc.get_metadata_request("/main2 (10).cpp").exec();
+        return files_rsc.upload_request("/123.txt", "uploaded!!!").set_overwrite_mode().exec();
     })
     //.then([](boost::future<ccd::dropbox::dropbox> f)
     //{
