@@ -2,6 +2,15 @@
 #include <ccd/utils.h>
 #include <gtest/gtest.h>
 
+TEST(utils_test, construct_var)
+{
+    ccd::var::map_t
+    {
+        { "a", ccd::var::vector_t { 1, 2, 3 } },
+        { "b", 5 }
+    };
+}
+
 TEST(utils_test, parse_json_from_string)
 {
     auto c = ccd::from_json(R"({

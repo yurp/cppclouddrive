@@ -4,17 +4,30 @@
 namespace ccd::http
 {
 
-authorized_oauth2_transport::authorized_oauth2_transport(std::string access_token, transport_func transport)
-    : m_access_token(std::move(access_token))
-    , m_transport(std::move(transport))
+namespace
 {
 
-}
-
-response_future authorized_oauth2_transport::operator()(request r)
+class authorized_oauth2_transport
 {
-    r.headers.emplace_back("Authorization", "Bearer " + m_access_token);
-    return m_transport(std::move(r));
+public:
+    authorized_oauth2_transport(std::string access_token, transport_func transport)
+        : m_access_token(std::move(access_token))
+        , m_transport(std::move(transport))
+    {
+
+    }
+
+    response_future operator()(request r)
+    {
+        r.headers.emplace_back("Authorization", "Bearer " + m_access_token);
+        return m_transport(std::move(r));
+    }
+
+private:
+    std::string m_access_token;
+    transport_func m_transport;
+};
+
 }
 
 authorized_oauth2_transport_factory::authorized_oauth2_transport_factory(std::string access_token,
