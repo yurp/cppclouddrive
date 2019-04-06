@@ -9,9 +9,12 @@
 
 int main()
 {
-    return auth().then([](boost::future<ccd::auth::oauth2::token> t)
+    boost::asio::io_service ios;
+    boost::asio::io_service::work w { ios };
+
+    auto f = auth(ios).then([&ios](boost::future<ccd::auth::oauth2::token> t)
     {
-        ccd::http::authorized_oauth2_transport_factory f { t.get().access, ccd::http::beast_transport_factory };
+        ccd::http::authorized_oauth2_transport_factory f { t.get().access, ccd::http::async_beast_transport_factory(ios) };
         ccd::dropbox::dropbox d{ std::move(f) };
         return d.files_resource().create_folder_request("/cpp_folder").set_autorename(true).exec();
 
@@ -35,6 +38,10 @@ int main()
         }
 
         return -1;
-    })
-    .get();
+    });
+
+    ios.run();
+    f.get();
+
+    return 0;
 }

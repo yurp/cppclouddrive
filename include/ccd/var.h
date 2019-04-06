@@ -68,7 +68,19 @@ struct var
     var& operator[](size_t i) { return as<vector_t>()[i]; }
     var& operator[](int i) { return as<vector_t>()[i]; }
 
+    bool operator==(bool_t y) const { return is<bool_t>() && as<bool_t>() == y; }
+    bool operator==(const string_t& y) const { return is<string_t>() && as<string_t>() == y; }
+    bool operator==(const char* y) const { return is<string_t>() && as<string_t>() == y; }
+    bool operator==(int_t y) const { return is<int_t>() && as<int_t>() == y; }
+    bool operator==(double_t y) const { return is<double_t>() && as<double_t>() == y; }
+
     variant_t x;
 };
+
+inline bool operator==(var::bool_t y, const var& x) { return x == y; }
+inline bool operator==(const var::string_t& y, const var& x) { return x == y; }
+inline bool operator==(const char* y, const var& x) { return x == y; }
+inline bool operator==(var::int_t y, const var& x) { return x == y; }
+inline bool operator==(var::double_t y, const var& x) { return x == y; }
 
 }

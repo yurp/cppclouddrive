@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-find_package(Boost REQUIRED COMPONENTS thread)
+find_package(Boost REQUIRED COMPONENTS thread iostreams)
 find_package(OpenSSL REQUIRED)
 find_package(RapidJSON REQUIRED)
 
@@ -87,6 +87,7 @@ set(CCD_SRC
 add_library(ccd ${CCD_HDR} ${CCD_SRC})
 target_link_libraries(ccd
         PUBLIC
+        Boost::iostreams
         Boost::system
         Boost::thread
         OpenSSL::SSL)

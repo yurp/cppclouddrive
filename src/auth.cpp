@@ -1,7 +1,5 @@
 
 #include <ccd/auth.h>
-
-#include <ccd/http/beast_transport.h>
 #include <ccd/utils.h>
 
 #include <boost/asio/ip/tcp.hpp>
@@ -163,7 +161,8 @@ std::string generate_auth_uri(std::string app_id,
 }
 
 
-boost::future<oauth2::token> token_from_code(const std::string& code,
+boost::future<oauth2::token> token_from_code(ccd::http::transport_func f,
+                                             const std::string& code,
                                              const std::string& app_id,
                                              const std::string& app_secret,
                                              const std::string token_host,
@@ -184,7 +183,7 @@ boost::future<oauth2::token> token_from_code(const std::string& code,
         r.body += "&redirect_uri=" + *redirect_uri;
     }
 
-    return ccd::http::beast_transport_factory()(r).then(response_future_to_token);
+    return f(r).then(response_future_to_token);
 }
 
 void open_browser(const std::string& auth_uri)
@@ -205,8 +204,13 @@ void open_browser(const std::string& auth_uri)
 
 }
 
-oauth2::oauth2(std::string app_id, std::string app_secret, std::string auth_uri, std::string token_uri)
-    : m_app_id(std::move(app_id))
+oauth2::oauth2(ccd::http::transport_factory f,
+               std::string app_id,
+               std::string app_secret,
+               std::string auth_uri,
+               std::string token_uri)
+    : m_f(std::move(f))
+    , m_app_id(std::move(app_id))
     , m_app_secret(std::move(app_secret))
     , m_auth_uri(std::move(auth_uri))
 {
@@ -270,7 +274,7 @@ boost::future<oauth2::token> oauth2::automatic(const std::string& redirect_uri,
                                                const std::optional<std::string>& scope)
 {
     auto auth_args = std::make_tuple(m_app_id, m_auth_uri, redirect_uri, scope);
-    auto token_args = std::make_tuple(std::string{}, m_app_id, m_app_secret, m_token_host, m_token_path, redirect_uri);
+    auto token_args = std::make_tuple(m_f(), std::string{}, m_app_id, m_app_secret, m_token_host, m_token_path, redirect_uri);
 
     auto [ start, finish ] = code_from_listener(redirect_uri);
     return start.then([auth_args = std::move(auth_args), finish = std::move(finish)](boost::future<void> ) mutable
@@ -280,7 +284,7 @@ boost::future<oauth2::token> oauth2::automatic(const std::string& redirect_uri,
     })
     .unwrap().then([token_args = std::move(token_args)](boost::future<std::string> code) mutable
     {
-        std::get<0>(token_args) = code.get();
+        std::get<1>(token_args) = code.get();
         return std::apply(token_from_code, std::move(token_args));
     })
     .unwrap();
@@ -292,7 +296,7 @@ boost::future<oauth2::token> oauth2::manual(const std::optional<std::string>& re
     std::cout << "go to: " << generate_auth_uri(m_app_id, m_auth_uri, redirect_uri, scope) << "\n"
               << "then paste input code here: ";
 
-    auto token_args = std::make_tuple(std::string{}, m_app_id, m_app_secret, m_token_host, m_token_path, redirect_uri);
+    auto token_args = std::make_tuple(m_f(), std::string{}, m_app_id, m_app_secret, m_token_host, m_token_path, redirect_uri);
     return boost::async(boost::launch::async, []
     {
         std::string code;
@@ -301,7 +305,7 @@ boost::future<oauth2::token> oauth2::manual(const std::optional<std::string>& re
     })
     .then([token_args = std::move(token_args), redirect_uri](boost::future<std::string> code) mutable
     {
-        std::get<0>(token_args) = code.get();
+        std::get<1>(token_args) = code.get();
         return std::apply(token_from_code, std::move(token_args));
     })
     .unwrap();
@@ -319,11 +323,11 @@ boost::future<oauth2::token> oauth2::refresh(const std::string& refresh_token)
     r.body += "&client_id=" + m_app_id;
     r.body += "&client_secret=" + m_app_secret;
 
-    return ccd::http::beast_transport_factory()(r).then(response_future_to_token);
+    return m_f()(r).then(response_future_to_token);
 }
 
-oauth2_gdrive::oauth2_gdrive(std::string app_id, std::string app_secret)
-    : m_oauth2(std::move(app_id), std::move(app_secret), gdrive_auth_uri, gdrive_token_uri)
+oauth2_gdrive::oauth2_gdrive(ccd::http::transport_factory f, std::string app_id, std::string app_secret)
+    : m_oauth2(std::move(f), std::move(app_id), std::move(app_secret), gdrive_auth_uri, gdrive_token_uri)
 {
 }
 
@@ -342,8 +346,8 @@ boost::future<oauth2::token> oauth2_gdrive::refresh(const std::string& refresh_t
     return m_oauth2.refresh(refresh_token);
 }
 
-oauth2_dropbox::oauth2_dropbox(std::string app_id, std::string app_secret)
-    : m_oauth2(std::move(app_id), std::move(app_secret), dropbox_auth_uri, dropbox_token_uri)
+oauth2_dropbox::oauth2_dropbox(ccd::http::transport_factory f, std::string app_id, std::string app_secret)
+    : m_oauth2(std::move(f), std::move(app_id), std::move(app_secret), dropbox_auth_uri, dropbox_token_uri)
 {
 }
 

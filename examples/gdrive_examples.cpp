@@ -5,9 +5,9 @@
 
 #include <iostream>
 
-boost::future<ccd::auth::oauth2::token> auth()
+boost::future<ccd::auth::oauth2::token> auth(boost::asio::io_service& ios)
 {
-    std::string token_file = "/Users/iurii/proj/cld/tokens/gdrive.yurii.pelykh.json";
+    std::string token_file = "/Users/iurii/proj/src/cldrv/tokens/gdrive.yurii.pelykh.json";
     std::string redirect_uri = "http://localhost:25000/";
     auto app_id = std::getenv("GDRIVE_APP_ID");
     auto app_secret = std::getenv("GDRIVE_SECRET_KEY");
@@ -16,7 +16,7 @@ boost::future<ccd::auth::oauth2::token> auth()
         boost::throw_exception(std::runtime_error{ "app credentials aren't set" });
     }
 
-    ccd::auth::oauth2_gdrive oa2 { app_id, app_secret };
+    ccd::auth::oauth2_gdrive oa2 { ccd::http::async_beast_transport_factory(ios), app_id, app_secret };
     auto oa2token = ccd::auth::oauth2::load_token(token_file);
     if (!oa2token.refresh.empty())
     {
@@ -97,7 +97,7 @@ int main()
     boost::asio::io_service ios;
     boost::asio::io_service::work w { ios };
 
-    auto f = auth().then([&ios](boost::future<ccd::auth::oauth2::token> t)
+    auto f = auth(ios).then([&ios](boost::future<ccd::auth::oauth2::token> t)
     {
         ccd::http::authorized_oauth2_transport_factory f{ t.get().access, ccd::http::async_beast_transport_factory(ios) };
         ccd::gdrive::gdrive g { std::move(f) };

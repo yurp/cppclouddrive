@@ -10,6 +10,11 @@
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
+#include <boost/iostreams/copy.hpp>
+#include <boost/iostreams/device/array.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
+#include <boost/iostreams/filter/zlib.hpp>
 
 #include <openssl/ssl.h>
 
@@ -56,7 +61,7 @@ boost::system::error_code process_https_error(boost::system::error_code ec)
 
 void load_root_certificates(ssl::context& ctx)
 {
-    std::string const cert =
+    static const std::string cert =
         /*  This is the DigiCert root certificate.
 
             CN = DigiCert High Assurance EV Root CA
@@ -105,24 +110,38 @@ void load_root_certificates(ssl::context& ctx)
     ;
 
     boost::system::error_code ec;
+    std::cerr << "%%%1\n";
     ctx.add_certificate_authority(boost::asio::buffer(cert.data(), cert.size()), ec);
+    std::cerr << "%%%2\n";
     if (ec)
     {
+        std::cerr << "cert auth error: " << ec.message() << "\n";
         boost::throw_exception(boost::system::system_error { ec });
     }
 }
 
-ssl::context create_ssl_ctx()
+ssl::context& create_ssl_ctx()
 {
-    ssl::context ctx { ssl::context::sslv23_client };
-    load_root_certificates(ctx);
-    ctx.set_verify_mode(ssl::verify_peer);
+    static auto ctx = []
+    {
+        std::cerr << "$$$1\n";
+        ssl::context ctx{ ssl::context::sslv23_client };
+        std::cerr << "$$$2\n";
+        load_root_certificates(ctx);
+        std::cerr << "$$$3\n";
+        ctx.set_verify_mode(ssl::verify_peer);
+        std::cerr << "$$$4\n";
 
+        return ctx;
+    }();
+
+    std::cerr << "^^^1\n";
     return ctx;
 }
 
-boost::beast::http::request<http::string_body> make_beast_request(const request& r)
+boost::beast::http::request<http::string_body> make_beast_request(const request& r, bool allow_compression)
 {
+    std::cerr << "#\n";
     using namespace std::literals;
 
     auto host = r.host.substr(8);
@@ -139,6 +158,10 @@ boost::beast::http::request<http::string_body> make_beast_request(const request&
     boost::beast::http::request<http::string_body> req{ http::string_to_verb(r.method), target, 11 };
     req.set(http::field::host, host);
     req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
+    if (allow_compression)
+    {
+        req.set(http::field::accept_encoding, "gzip, deflate");
+    }
 
     for (const auto h: r.headers)
     {
@@ -164,6 +187,36 @@ response to_response(const http::response<http::string_body>& res)
     ccd::http::response resp;
     resp.body = res.body();
     resp.code = res.result_int();
+
+    //decompress with boost's interface
+    boost::iostreams::array_source src { resp.body.data(), resp.body.size() };
+    boost::iostreams::filtering_istream is;
+
+     //boost::iostreams::zlib_params zparams{};
+    if (res["Content-Encoding"] == "deflate")
+    {
+        std::cerr << "decompressing " << res["Content-Encoding"] << std::endl;
+        std::cerr << "-------------------------------------------------" << '\n';
+        //is.push(boost::iostreams::zlib_decompressor{ -MAX_WBITS });			// deflate
+        is.push(boost::iostreams::zlib_decompressor{ });			// deflate
+    }
+    else if (res["Content-Encoding"] == "gzip")
+    {
+        std::cerr << "decompressing " << res["Content-Encoding"] << std::endl;
+        std::cerr << "-------------------------------------------------" << '\n';
+        is.push(boost::iostreams::gzip_decompressor{});						// gzip
+    }
+    else if (res["Content-Encoding"] == "")
+    {
+        std::cerr << "uncompressed " << res["Content-Encoding"] << std::endl;
+        std::cerr << "-------------------------------------------------" << '\n';
+    }
+
+    is.push(src);
+    std::stringstream ss;
+    boost::iostreams::copy(is, ss);
+    resp.body = ss.str();
+
     std::cerr << "\nRES---------------------------------------------------------------\n\n"
               << res
               << "\n------------------------------------------------------------------\n\n";
@@ -185,20 +238,20 @@ boost::system::error_code set_tlsext_host_name(ssl::stream<tcp::socket>& stream,
 class data
 {
 public:
-    ssl::context m_ctx;
+    //ssl::context m_ctx;
     tcp::resolver m_resolver;
     ssl::stream<tcp::socket> m_stream;
     boost::beast::flat_buffer m_buffer;
     http::request<http::string_body> m_beast_request;
     http::response<http::string_body> m_beast_response;
 
-    data(boost::asio::io_context& ioc, request r)
-        : m_ctx(create_ssl_ctx())
-          , m_resolver(ioc)
-          , m_stream(ioc, m_ctx)
-          , m_buffer()
-          , m_beast_request(make_beast_request(std::move(r)))
-          , m_beast_response()
+    data(request r, boost::asio::io_context& ioc, bool allow_compression)
+        //: m_ctx(create_ssl_ctx())
+        : m_resolver(ioc)
+        , m_stream(ioc, create_ssl_ctx()/*m_ctx*/)
+        , m_buffer()
+        , m_beast_request(make_beast_request(std::move(r), allow_compression))
+        , m_beast_response()
     {
 
     }
@@ -214,7 +267,7 @@ response_future beast_transport(request r)
     return boost::async(boost::launch::async, [r = std::move(r)]
     {
         boost::asio::io_context ioc;
-        data d { ioc, std::move(r) };
+        data d { std::move(r), ioc, false };
 
         if (auto ec = d.prepare())
         {
@@ -241,9 +294,12 @@ response_future beast_transport(request r)
 
 ccd::use_boost_future_ec_t ftr_https { process_https_error };
 
-response_future async_beast_transport(request r, boost::asio::io_context& ioc)
+response_future async_beast_transport(request r, boost::asio::io_context& ioc, bool allow_compression)
 {
-    auto d = std::make_shared<data>(ioc, std::move(r));
+    std::cerr << "!0\n";
+    auto d = std::make_shared<data>(std::move(r), ioc, allow_compression);
+
+    std::cerr << "!1\n";
 
     // Set SNI Hostname (many hosts need this to handshake successfully)
     if (auto ec = d->prepare())
@@ -251,32 +307,40 @@ response_future async_beast_transport(request r, boost::asio::io_context& ioc)
         return boost::make_exceptional_future<ccd::http::response>(boost::system::system_error{ ec });
     }
 
+    std::cerr << "!2\n";
+
     // Look up the domain name
     auto host = d->m_beast_request[http::field::host].to_string();
     return d->m_resolver.async_resolve(host.c_str(), "443", ftr_https)
         .then([d](boost::future<tcp::resolver::results_type> f)
         {
+            std::cerr << "!3\n";
             auto results = f.get();
             return boost::asio::async_connect(d->m_stream.next_layer(), results.begin(), results.end(), ftr_https);
         })
         .unwrap().then([d](boost::future<boost::asio::ip::tcp::resolver::iterator> )
         {
+            std::cerr << "!4\n";
             return d->m_stream.async_handshake(ssl::stream_base::client, ftr_https);
         })
         .unwrap().then([d](boost::future<void> )
         {
+            std::cerr << "!5\n";
             return http::async_write(d->m_stream, d->m_beast_request, ftr_https);
         })
         .unwrap().then([d](boost::future<std::size_t> )
         {
+            std::cerr << "!6\n";
             return http::async_read(d->m_stream, d->m_buffer, d->m_beast_response, ftr_https);
         })
         .unwrap().then([d](boost::future<std::size_t> )
         {
+            std::cerr << "!7\n";
             return d->m_stream.async_shutdown(ftr_https);
         })
         .unwrap().then([d](boost::future<void> )
         {
+            std::cerr << "!8\n";
             return to_response(d->m_beast_response);
         });
 }
@@ -289,8 +353,9 @@ transport_func beast_transport_factory()
     return beast_transport;
 }
 
-async_beast_transport_factory::async_beast_transport_factory(boost::asio::io_context& ioc)
+async_beast_transport_factory::async_beast_transport_factory(boost::asio::io_context& ioc, bool allow_compression)
     : m_ioc(ioc)
+    , m_allow_compression(allow_compression)
 {
 
 }
@@ -298,9 +363,10 @@ async_beast_transport_factory::async_beast_transport_factory(boost::asio::io_con
 transport_func async_beast_transport_factory::operator()()
 {
     std::call_once(f, [] { OpenSSL_add_ssl_algorithms(); });
-    return [ioc = &m_ioc](request r)
+    return [ioc = &m_ioc, allow_compression = m_allow_compression](request r)
     {
-        return async_beast_transport(r, *ioc);
+        std::cerr << "!-0\n";
+        return async_beast_transport(r, *ioc, allow_compression);
     };
 }
 

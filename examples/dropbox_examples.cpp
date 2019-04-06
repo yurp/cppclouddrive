@@ -5,9 +5,9 @@
 
 #include <iostream>
 
-boost::future<ccd::auth::oauth2::token> auth()
+boost::future<ccd::auth::oauth2::token> auth(boost::asio::io_service& ios)
 {
-    std::string token_file = "/Users/iurii/proj/src/cldrv/tokens/dropbox.yurp1980.json";
+    std::string token_file = "/Users/iurii/proj/src/cldrv/tokens/dropbox.yurp1980_2.json";
     std::string redirect_uri = "http://localhost:25000/";
     auto app_id = std::getenv("DROPBOX_APP_ID");
     auto app_secret = std::getenv("DROPBOX_SECRET_KEY");
@@ -22,7 +22,7 @@ boost::future<ccd::auth::oauth2::token> auth()
         return boost::make_ready_future(oa2token);
     }
 
-    ccd::auth::oauth2_dropbox oa2 { app_id, app_secret };
+    ccd::auth::oauth2_dropbox oa2 { ccd::http::async_beast_transport_factory(ios), app_id, app_secret };
     return oa2.automatic(redirect_uri).then([token_file](boost::future<ccd::auth::oauth2::token> ft)
         {
             auto t = ft.get();
@@ -57,7 +57,7 @@ int main()
     boost::asio::io_service ios;
     boost::asio::io_service::work w { ios };
 
-    auto f = auth().then([&ios](boost::future<ccd::auth::oauth2::token> t)
+    auto f = auth(ios).then([&ios](boost::future<ccd::auth::oauth2::token> t)
     {
         ccd::http::authorized_oauth2_transport_factory f{ t.get().access, ccd::http::async_beast_transport_factory(ios) };
         ccd::dropbox::dropbox d{ std::move(f) };
