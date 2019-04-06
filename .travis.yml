@@ -23,7 +23,7 @@ before_script:
   - wget https://dl.bintray.com/boostorg/release/1.69.0/source/boost_1_69_0.tar.gz
   - tar xf boost_1_69_0.tar.gz
   - cd boost_1_69_0
-  - ./bootstrap.sh --with-libraries=atomic,chrono,date_time,system,thread,iostreams
+  - ./bootstrap.sh --with-libraries=atomic,chrono,date_time,iostreams,system,regex,thread
   - ./b2 --toolset=gcc-8
   - sudo ./b2 -d0 install
   - cd ..
