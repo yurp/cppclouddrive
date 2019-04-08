@@ -129,7 +129,7 @@ ssl::context& create_ssl_ctx()
         std::cerr << "$$$2\n";
         load_root_certificates(ctx);
         std::cerr << "$$$3\n";
-        ctx.set_verify_mode(ssl::verify_peer);
+        ctx.set_verify_mode(ssl::verify_none);
         std::cerr << "$$$4\n";
 
         return ctx;

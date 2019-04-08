@@ -109,7 +109,7 @@ TEST(beast_transport_test, test_httpbin_get)
             ASSERT_EQ(js["headers"]["Custom-Header-1"], "1234567");
             ASSERT_EQ(js["headers"]["Custom-Header-2"], "7654321");
             ASSERT_EQ(js["headers"]["Host"], "httpbin.org");
-            ASSERT_EQ(js["headers"]["User-Agent"], "Boost.Beast/181");
+            ASSERT_THAT(js["headers"]["User-Agent"].as<std::string>(), HasSubstr("Boost.Beast/"));
         }
         catch (const std::exception& e)
         {
@@ -240,7 +240,7 @@ TEST(beast_transport_test, test_httpbin_get_gzip)
             ASSERT_EQ(js["headers"].as<ccd::var::map_t>().size(), 3u);
             ASSERT_EQ(js["headers"]["Accept-Encoding"], "gzip, deflate");
             ASSERT_EQ(js["headers"]["Host"], "httpbin.org");
-            ASSERT_EQ(js["headers"]["User-Agent"], "Boost.Beast/181");
+            ASSERT_THAT(js["headers"]["User-Agent"].as<std::string>(), HasSubstr("Boost.Beast/"));
         }
         catch (const std::exception& e)
         {
@@ -289,7 +289,7 @@ TEST(beast_transport_test, test_httpbin_post)
             ASSERT_TRUE(js["headers"].has("Content-Length"));
             ASSERT_EQ(js["headers"]["Content-Type"], "application/json");
             ASSERT_EQ(js["headers"]["Host"], "httpbin.org");
-            ASSERT_EQ(js["headers"]["User-Agent"], "Boost.Beast/181");
+            ASSERT_THAT(js["headers"]["User-Agent"].as<std::string>(), HasSubstr("Boost.Beast/"));
             ASSERT_TRUE(js.has("data"));
             ASSERT_EQ(js["data"], "{ \"a\": 2 }");
         }
