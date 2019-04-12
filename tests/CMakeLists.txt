@@ -11,7 +11,8 @@ set(TESTS_SRC
         utils_test.cpp)
 
 set(GDRIVE_TESTS_SRC
-        gdrive/model/gdrive_user_test.cpp)
+        gdrive/model/gdrive_user_test.cpp
+        gdrive/resource/gdrive_copy_test.cpp)
 
 set(HTTP_TESTS_SRC
         http/beast_transport_test.cpp)
